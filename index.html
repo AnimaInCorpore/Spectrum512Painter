@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>GEM Paint</title>
+	<style>
+		:root {
+			--white: #ffffff;
+			--black: #000000;
+			/* Classic GEM 50% dither pattern */
+			--dither: repeating-conic-gradient(var(--black) 0% 25%, transparent 0% 50%) 0 0 / 2px 2px;
+		}
+
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		html, body { height: 100%; overflow: hidden; background: var(--white); }
+
+		body {
+			color: var(--black);
+			font-family: 'Arial', sans-serif; /* Closest standard font to the GEM Desktop sans */
+			font-size: 13px;
+			font-weight: bold;
+			line-height: 1;
+			cursor: default;
+			image-rendering: pixelated;
+			-webkit-font-smoothing: none;
+			user-select: none;
+		}
+
+		/* ===== MENU BAR ===== */
+		.gem-menubar {
+			height: 20px;
+			background: var(--white);
+			border-bottom: 2px solid var(--black);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 16px 0 8px;
+			letter-spacing: 0.5px;
+		}
+
+		.menu-left {
+			display: flex;
+			gap: 16px;
+		}
+
+		.gem-menubar-item {
+			cursor: pointer;
+		}
+
+		.gem-menubar-item:hover {
+			background: var(--black);
+			color: var(--white);
+		}
+
+		.menu-right {
+			font-family: 'Courier New', monospace;
+			font-weight: bold;
+			letter-spacing: 1px;
+		}
+
+		/* ===== MAIN WINDOW ===== */
+		.gem-desktop {
+			height: calc(100vh - 20px);
+			padding: 0;
+			display: flex;
+		}
+
+		.gem-window {
+			background: var(--white);
+			border-left: 2px solid var(--black);
+			border-right: 2px solid var(--black);
+			border-bottom: 2px solid var(--black);
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Title bar */
+		.gem-titlebar {
+			height: 20px;
+			border-bottom: 2px solid var(--black);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: var(--white);
+		}
+
+		.gem-titlebar-close {
+			width: 20px;
+			height: 100%;
+			border-right: 2px solid var(--black);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+		}
+
+		.gem-titlebar-full {
+			width: 20px;
+			height: 100%;
+			border-left: 2px solid var(--black);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+		}
+
+		.gem-titlebar-name {
+			font-family: 'Courier New', monospace;
+			font-weight: bold;
+			font-size: 14px;
+		}
+
+		/* ===== WORKSPACE GRID ===== */
+		.gem-workspace {
+			display: grid;
+			grid-template-columns: 86px 1fr 100px;
+			flex: 1;
+			min-height: 0;
+		}
+
+		/* ===== LEFT PANEL (Tools) ===== */
+		.gem-tools-panel {
+			border-right: 2px solid var(--black);
+			background-color: var(--white);
+			background-image: var(--dither);
+			display: flex;
+			flex-direction: column;
+			padding: 4px;
+			gap: 4px;
+			overflow-y: auto;
+		}
+
+		.gem-tools-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			background: var(--white);
+			border: 1px solid var(--black);
+		}
+
+		.gem-tool-btn {
+			height: 26px;
+			border-right: 1px solid var(--black);
+			border-bottom: 1px solid var(--black);
+			background: var(--white);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			padding: 0;
+		}
+		
+		.gem-tool-btn:nth-child(3n) { border-right: none; }
+		.gem-tool-btn:nth-last-child(-n+3) { border-bottom: none; }
+
+		.gem-tool-btn.active { background: var(--black); }
+		.gem-tool-btn.active svg path,
+		.gem-tool-btn.active svg line,
+		.gem-tool-btn.active svg rect:not([fill="none"]),
+		.gem-tool-btn.active svg circle,
+		.gem-tool-btn.active svg polygon,
+		.gem-tool-btn.active svg text,
+		.gem-tool-btn.active svg ellipse {
+			stroke: var(--white);
+			fill: var(--white);
+		}
+
+		.gem-tool-btn svg { width: 18px; height: 18px; }
+
+		/* Fore/Background Colors */
+		.gem-color-block {
+			height: 36px;
+			border: 1px solid var(--black);
+			display: flex;
+			flex-direction: column;
+		}
+		.gem-color-block-top { flex: 1; background: var(--white); border-bottom: 1px solid var(--black); }
+		.gem-color-block-bottom { flex: 1; background: var(--black); }
+
+		/* Slider */
+		.gem-slider-container {
+			background: var(--white);
+			border: 1px solid var(--black);
+			padding: 6px;
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-end;
+			height: 80px;
+		}
+
+		.gem-slider-track-wrap {
+			display: flex;
+			height: 100%;
+		}
+
+		.gem-slider-track {
+			width: 12px;
+			height: 100%;
+			border: 1px solid var(--black);
+			position: relative;
+		}
+
+		.gem-slider-thumb {
+			position: absolute;
+			top: 10%;
+			left: -2px;
+			right: -2px;
+			height: 8px;
+			border: 1px solid var(--black);
+			border-bottom-width: 2px;
+			background: var(--white);
+		}
+
+		.gem-slider-ticks {
+			width: 8px;
+			height: 100%;
+			border-right: 1px solid var(--black);
+			background: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, transparent 1px, transparent 4px);
+			margin-left: 2px;
+		}
+
+		.gem-slider-value {
+			border: 1px solid var(--black);
+			padding: 2px 6px;
+			font-family: 'Courier New', monospace;
+			font-size: 14px;
+			height: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		/* ===== CENTER PANEL (Canvas & Scrollbars) ===== */
+		.gem-canvas-area {
+			display: grid;
+			grid-template-columns: 1fr 18px;
+			grid-template-rows: 1fr 18px;
+			background: var(--white);
+		}
+
+		.gem-canvas-container {
+			border-right: 2px solid var(--black);
+			border-bottom: 2px solid var(--black);
+			background: var(--white);
+			position: relative;
+			overflow: hidden;
+		}
+
+		#paint {
+			display: block;
+			image-rendering: pixelated;
+			cursor: crosshair;
+			width: 100%;
+			height: 100%;
+		}
+
+		/* Scrollbars */
+		.gem-scrollbar {
+			background: var(--white);
+			display: flex;
+		}
+
+		.gem-scrollbar.vertical {
+			flex-direction: column;
+			border-bottom: 2px solid var(--black);
+		}
+
+		.gem-scrollbar.horizontal {
+			border-right: 2px solid var(--black);
+		}
+
+		.gem-sb-btn {
+			width: 16px;
+			height: 16px;
+			background: var(--white);
+			border: 1px solid var(--black);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.gem-sb-btn svg { width: 10px; height: 10px; fill: var(--black); }
+
+		.gem-sb-track {
+			flex: 1;
+			position: relative;
+			display: flex;
+		}
+
+		.gem-sb-track-dither {
+			flex: 1;
+			background-color: var(--white);
+			background-image: var(--dither);
+		}
+
+		.gem-sb-thumb {
+			position: absolute;
+			background: var(--white);
+			border: 1px solid var(--black);
+		}
+		
+		.gem-scrollbar.vertical .gem-sb-thumb { top: 0; left: 1px; right: 1px; height: 60px; }
+		.gem-scrollbar.vertical .gem-sb-track { flex-direction: column; justify-content: flex-end; }
+		.gem-scrollbar.vertical .gem-sb-track-dither { height: 20%; flex: none; border-top: 1px solid var(--black); }
+
+		.gem-scrollbar.horizontal .gem-sb-thumb { top: 1px; left: 0; bottom: 1px; width: 80px; }
+		.gem-scrollbar.horizontal .gem-sb-track { justify-content: flex-end; }
+		.gem-scrollbar.horizontal .gem-sb-track-dither { width: 20%; flex: none; border-left: 1px solid var(--black); }
+
+		.gem-sb-corner { 
+			background: var(--white); 
+			display: flex;
+			align-items: flex-end;
+			justify-content: flex-end;
+			padding: 2px;
+		}
+
+		.gem-sb-corner svg { width: 10px; height: 10px; fill: var(--black); }
+
+		/* ===== RIGHT PANEL (Patterns) ===== */
+		.gem-right-panel {
+			border-left: 2px solid var(--black);
+			background-color: var(--white);
+			background-image: var(--dither);
+			display: flex;
+			flex-direction: column;
+			padding: 4px;
+			gap: 4px;
+			overflow-y: auto;
+		}
+
+		.gem-preview-container {
+			background: var(--white);
+			border: 1px solid var(--black);
+			display: flex;
+			flex-direction: column;
+		}
+
+		.gem-preview-box {
+			height: 38px;
+			background: var(--black);
+			margin: 4px;
+			border: 1px solid var(--black);
+		}
+
+		.gem-preview-text {
+			font-size: 11px;
+			text-align: center;
+			border-top: 1px solid var(--black);
+			padding: 2px 0;
+			font-family: 'Courier New', monospace;
+			font-weight: bold;
+		}
+
+		.gem-patterns {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			background: var(--white);
+			border: 1px solid var(--black);
+		}
+
+		.gem-pattern {
+			height: 22px;
+			border-right: 1px solid var(--black);
+			border-bottom: 1px solid var(--black);
+			cursor: pointer;
+			image-rendering: pixelated;
+		}
+
+		.gem-pattern:nth-child(3n) { border-right: none; }
+		.gem-pattern:nth-last-child(-n+3) { border-bottom: none; }
+
+		.gem-pattern.active {
+			outline: 2px solid var(--black);
+			outline-offset: -3px;
+		}
+
+		/* Specific CSS Patterns based on image */
+		.pat-solid-black { background: var(--black); }
+		.pat-solid-white { background: var(--white); }
+		.pat-dither { background-color: var(--white); background-image: var(--dither); }
+		.pat-bricks { background: repeating-linear-gradient(0deg, var(--black) 0px 1px, var(--white) 1px 5px), repeating-linear-gradient(90deg, var(--black) 0px 1px, transparent 1px 6px); background-color: var(--white); }
+		.pat-weave { background: repeating-linear-gradient(45deg, var(--black) 0px 1px, var(--white) 1px 4px), repeating-linear-gradient(-45deg, var(--black) 0px 1px, transparent 1px 4px); background-color: var(--white); }
+		.pat-dots { background: radial-gradient(var(--black) 35%, transparent 40%) 0 0 / 5px 5px var(--white); }
+		.pat-scales { background: radial-gradient(circle at 50% 100%, transparent 40%, var(--black) 45%, var(--white) 50%) 0 0 / 8px 8px var(--white); }
+		
+		/* SVG Patterns for complex ones */
+		.pat-money { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><text x="3" y="13" font-family="Courier" font-size="14" font-weight="bold" fill="black">$</text></svg>'); background-color: var(--white); }
+		.pat-trees { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M6,1 L10,6 L8,6 L11,10 L1,10 L4,6 L2,6 Z" fill="black"/><rect x="5" y="10" width="2" height="2" fill="black"/></svg>'); background-color: var(--white); }
+		.pat-waves { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M0,6 Q3,0 6,6 T12,6" fill="none" stroke="black" stroke-width="1.5"/></svg>'); background-color: var(--white); }
+		.pat-diag { background: repeating-linear-gradient(-45deg, var(--black) 0px 2px, var(--white) 2px 6px); }
+		.pat-vert { background: repeating-linear-gradient(90deg, var(--black) 0px 2px, var(--white) 2px 6px); }
+
+	</style>
+</head>
+<body>
+
+	<div class="gem-menubar">
+		<div class="menu-left">
+			<span class="gem-menubar-item">Datei</span>
+			<span class="gem-menubar-item">Hilfsmittel</span>
+			<span class="gem-menubar-item">Ausschnitt</span>
+			<span class="gem-menubar-item">Muster</span>
+			<span class="gem-menubar-item">Zeichen</span>
+			<span class="gem-menubar-item">Schriftstil</span>
+		</div>
+		<div class="menu-right">PAINT</div>
+	</div>
+
+	<div class="gem-desktop">
+		<div class="gem-window">
+
+			<div class="gem-titlebar">
+				<div class="gem-titlebar-close">
+					<svg viewBox="0 0 16 16">
+						<rect x="3" y="3" width="10" height="10" fill="none" stroke="black" stroke-width="1.5"/>
+						<rect x="4" y="4" width="3" height="8" fill="black"/>
+					</svg>
+				</div>
+				<div class="gem-titlebar-name">A:\IMAGES\TIGER.IMG</div>
+				<div class="gem-titlebar-full">
+					<svg viewBox="0 0 16 16">
+						<rect x="3" y="3" width="10" height="10" fill="none" stroke="black" stroke-width="1.5"/>
+						<polygon points="8,4 12,8 8,12 4,8" fill="none" stroke="black" stroke-width="1"/>
+					</svg>
+				</div>
+			</div>
+
+			<div class="gem-workspace">
+				<div class="gem-tools-panel">
+					<div class="gem-tools-grid">
+						<button class="gem-tool-btn" title="Microscope (Zoom)">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black" stroke-width="1.5">
+								<circle cx="6" cy="6" r="3"/><line x1="8" y1="8" x2="11" y2="11"/><path d="M2,14 L14,14 M8,14 L8,11"/>
+							</svg>
+						</button>
+						<button class="gem-tool-btn" title="Marquee">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black" stroke-dasharray="2,2"><rect x="2" y="3" width="12" height="10"/></svg>
+						</button>
+						<button class="gem-tool-btn" title="Text">
+							<svg viewBox="0 0 16 16"><text x="1" y="11" font-family="Arial" font-size="9" font-weight="bold" fill="black">TEXT</text></svg>
+						</button>
+
+						<button class="gem-tool-btn active" title="Pencil">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black">
+								<line x1="4" y1="12" x2="11" y2="5"/><polygon points="11,5 13,3 12,2 10,4" fill="black"/><line x1="3" y1="13" x2="4" y2="12"/><line x1="4" y1="14" x2="11" y2="14" stroke-width="2"/>
+							</svg>
+						</button>
+						<button class="gem-tool-btn" title="Eraser">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black">
+								<rect x="4" y="3" width="8" height="8"/><line x1="4" y1="7" x2="12" y2="7"/><line x1="4" y1="14" x2="12" y2="14" stroke-width="2"/>
+							</svg>
+						</button>
+						<button class="gem-tool-btn" title="Line">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black" stroke-width="1.5"><line x1="2" y1="14" x2="14" y2="2"/></svg>
+						</button>
+
+						<button class="gem-tool-btn" title="Fill">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black">
+								<polygon points="3,8 10,4 13,9 6,13"/><path d="M2,10 Q4,14 6,13" fill="black"/><circle cx="4" cy="14" r="1" fill="black"/>
+							</svg>
+						</button>
+						<button class="gem-tool-btn" title="Spray">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black">
+								<rect x="4" y="6" width="8" height="8"/><rect x="6" y="4" width="4" height="2" fill="black"/><circle cx="2" cy="7" r="0.5" fill="black"/><circle cx="3" cy="5" r="0.5" fill="black"/><circle cx="1" cy="6" r="0.5" fill="black"/>
+							</svg>
+						</button>
+						<button class="gem-tool-btn" title="Faucet">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black">
+								<path d="M1,7 L11,7 L11,11 L9,11 L9,9 L1,9 Z"/><rect x="5" y="5" width="2" height="2" fill="black"/><path d="M10,12 Q10,15 12,15 Q14,15 14,12 Z" fill="black"/>
+							</svg>
+						</button>
+
+						<button class="gem-tool-btn" title="Rectangle">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><rect x="2" y="4" width="12" height="8"/></svg>
+						</button>
+						<button class="gem-tool-btn" title="Rounded Rectangle">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><rect x="2" y="4" width="12" height="8" rx="3"/></svg>
+						</button>
+						<button class="gem-tool-btn" title="Polygon">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><polygon points="2,12 8,12 8,8 14,8 14,4 2,4"/></svg>
+						</button>
+
+						<button class="gem-tool-btn" title="Pie Slice">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><path d="M3,13 L13,13 A10,10 0 0,0 3,3 Z"/></svg>
+						</button>
+						<button class="gem-tool-btn" title="Ellipse">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><ellipse cx="8" cy="8" rx="6" ry="4"/></svg>
+						</button>
+						<button class="gem-tool-btn" title="Freehand">
+							<svg viewBox="0 0 16 16" fill="none" stroke="black"><path d="M4,8 Q 6,2 10,5 T 14,9 Q 12,14 6,13 T 4,8 Z"/></svg>
+						</button>
+					</div>
+
+					<div class="gem-color-block">
+						<div class="gem-color-block-top"></div>
+						<div class="gem-color-block-bottom"></div>
+					</div>
+
+					<div class="gem-slider-container">
+						<div class="gem-slider-track-wrap">
+							<div class="gem-slider-track">
+								<div class="gem-slider-thumb"></div>
+							</div>
+							<div class="gem-slider-ticks"></div>
+						</div>
+						<div class="gem-slider-value">1</div>
+					</div>
+				</div>
+
+				<div class="gem-canvas-area">
+					<div class="gem-canvas-container">
+						<canvas id="paint" width="600" height="400"></canvas>
+					</div>
+					<div class="gem-scrollbar vertical">
+						<div class="gem-sb-btn"><svg viewBox="0 0 10 10"><polygon points="5,2 9,8 1,8"/></svg></div>
+						<div class="gem-sb-track">
+							<div class="gem-sb-thumb"></div>
+							<div class="gem-sb-track-dither"></div>
+						</div>
+						<div class="gem-sb-btn"><svg viewBox="0 0 10 10"><polygon points="1,2 9,2 5,8"/></svg></div>
+					</div>
+					<div class="gem-scrollbar horizontal">
+						<div class="gem-sb-btn"><svg viewBox="0 0 10 10"><polygon points="8,1 2,5 8,9"/></svg></div>
+						<div class="gem-sb-track">
+							<div class="gem-sb-thumb"></div>
+							<div class="gem-sb-track-dither"></div>
+						</div>
+						<div class="gem-sb-btn"><svg viewBox="0 0 10 10"><polygon points="2,1 8,5 2,9"/></svg></div>
+					</div>
+					<div class="gem-sb-corner"><svg viewBox="0 0 10 10"><polygon points="0,10 10,0 10,10"/></svg></div>
+				</div>
+
+				<div class="gem-right-panel">
+					<div class="gem-preview-container">
+						<div class="gem-preview-box"></div>
+						<div class="gem-preview-text">GLAS</div>
+					</div>
+
+					<div class="gem-patterns" id="patterns-grid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		(function() {
+			// Populate the 21 patterns to match the 3x7 grid visible in the reference image
+			const patternsGrid = document.getElementById('patterns-grid');
+			const patternClasses = [
+				'pat-solid-black', 'pat-solid-white', 'pat-dither',
+				'pat-dither', 'pat-weave', 'pat-bricks',
+				'pat-weave', 'pat-waves', 'pat-money',
+				'pat-scales', 'pat-dots', 'pat-waves',
+				'pat-weave', 'pat-solid-white', 'pat-dither',
+				'pat-dither', 'pat-dots', 'pat-trees',
+				'pat-vert', 'pat-dots', 'pat-diag'
+			];
+
+			patternClasses.forEach((cls, i) => {
+				const div = document.createElement('div');
+				div.className = 'gem-pattern ' + cls;
+				if (i === 0) div.classList.add('active'); // Set default active
+
+				div.addEventListener('click', function() {
+					document.querySelectorAll('.gem-pattern').forEach(p => p.classList.remove('active'));
+					this.classList.add('active');
+				});
+				patternsGrid.appendChild(div);
+			});
+
+			// Tool Selection Logic
+			document.querySelectorAll('.gem-tool-btn').forEach(btn => {
+				btn.addEventListener('click', function() {
+					document.querySelectorAll('.gem-tool-btn').forEach(n => n.classList.remove('active'));
+					this.classList.add('active');
+				});
+			});
+
+			// Simple Canvas Init (keeps it visually white instead of transparent)
+			const canvas = document.getElementById('paint');
+			const ctx = canvas.getContext('2d');
+			ctx.fillStyle = '#ffffff';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			
+		})();
+	</script>
+</body>
+</html>

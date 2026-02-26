@@ -1,0 +1,3 @@
+[submodule "jscolorquantizer"]
+	path = jscolorquantizer
+	url = git@bitbucket.org:AnimaInCorpore/jscolorquantizer.git
