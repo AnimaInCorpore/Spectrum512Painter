@@ -41,16 +41,90 @@
 
 		.menu-left {
 			display: flex;
-			gap: 16px;
+			height: 100%;
+			gap: 0;
+			position: relative;
+		}
+
+		.gem-menu {
+			position: relative;
+			height: 100%;
 		}
 
 		.gem-menubar-item {
+			border: none;
+			background: transparent;
+			color: inherit;
+			font: inherit;
+			height: 100%;
+			padding: 0 6px;
+			display: flex;
+			align-items: center;
 			cursor: pointer;
 		}
 
-		.gem-menubar-item:hover {
+		.gem-menubar-item:hover,
+		.gem-menu.open .gem-menubar-item {
 			background: var(--black);
 			color: var(--white);
+		}
+
+		.gem-dropdown {
+			display: none;
+			position: absolute;
+			top: 20px;
+			left: 0;
+			min-width: 150px;
+			background: var(--white);
+			border: 1px solid var(--black);
+			z-index: 50;
+			padding: 2px 0;
+		}
+
+		.gem-menu.open .gem-dropdown {
+			display: block;
+		}
+
+		.gem-menu-entry {
+			border: none;
+			background: transparent;
+			color: inherit;
+			font: inherit;
+			width: 100%;
+			height: 18px;
+			padding: 0 8px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			text-align: left;
+			cursor: pointer;
+		}
+
+		.gem-menu-entry:hover {
+			background: var(--black);
+			color: var(--white);
+		}
+
+		.gem-menu-entry.disabled {
+			color: #666666;
+			cursor: default;
+		}
+
+		.gem-menu-entry.disabled:hover {
+			background: transparent;
+			color: #666666;
+		}
+
+		.gem-menu-separator {
+			height: 2px;
+			margin: 2px 0;
+			border-top: 1px solid var(--black);
+		}
+
+		.gem-menu-shortcut {
+			font-family: 'Courier New', monospace;
+			font-size: 11px;
+			margin-left: 14px;
 		}
 
 		.menu-right {
@@ -399,12 +473,67 @@
 
 	<div class="gem-menubar">
 		<div class="menu-left">
-			<span class="gem-menubar-item">Desk</span>
-			<span class="gem-menubar-item">File</span>
-			<span class="gem-menubar-item">Edit</span>
-			<span class="gem-menubar-item">Pattern</span>
-			<span class="gem-menubar-item">Draw</span>
-			<span class="gem-menubar-item">Text</span>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Desk</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry">About Spectrum512 Painter...</button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry">Desktop Info</button>
+				</div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">File</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry"><span>New</span><span class="gem-menu-shortcut">N</span></button>
+					<button type="button" class="gem-menu-entry"><span>Open...</span><span class="gem-menu-shortcut">O</span></button>
+					<button type="button" class="gem-menu-entry"><span>Merge...</span><span class="gem-menu-shortcut">M</span></button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry"><span>Save</span><span class="gem-menu-shortcut">S</span></button>
+					<button type="button" class="gem-menu-entry">Save As...</button>
+					<button type="button" class="gem-menu-entry">Export...</button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry">Quit</button>
+				</div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Tools</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry">Undo</button>
+					<button type="button" class="gem-menu-entry">Grid On</button>
+					<button type="button" class="gem-menu-entry">Transparent On</button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry">Brush Shape...</button>
+					<button type="button" class="gem-menu-entry">View Picture...</button>
+					<button type="button" class="gem-menu-entry">Size Picture...</button>
+				</div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Selection</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry">Select All</button>
+					<button type="button" class="gem-menu-entry">Deselect</button>
+					<button type="button" class="gem-menu-entry">Invert Selection</button>
+					<button type="button" class="gem-menu-entry">Crop to Selection</button>
+				</div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Patterns</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry">Pattern Library...</button>
+					<button type="button" class="gem-menu-entry">Load Patterns...</button>
+					<button type="button" class="gem-menu-entry">Save Patterns...</button>
+				</div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Typestyle</button>
+				<div class="gem-dropdown">
+					<button type="button" class="gem-menu-entry">Normal</button>
+					<button type="button" class="gem-menu-entry">Bold</button>
+					<button type="button" class="gem-menu-entry">Light</button>
+					<button type="button" class="gem-menu-entry">Italic</button>
+					<button type="button" class="gem-menu-entry">Underline</button>
+				</div>
+			</div>
 		</div>
 		<div class="menu-right">PAINT</div>
 	</div>
@@ -577,6 +706,67 @@
 					document.querySelectorAll('.gem-tool-btn').forEach(n => n.classList.remove('active'));
 					this.classList.add('active');
 				});
+			});
+
+			// GEM-style menu bar behavior
+			const menuLeft = document.querySelector('.menu-left');
+			const menus = Array.from(document.querySelectorAll('.gem-menu'));
+			let openMenu = null;
+
+			function closeMenus() {
+				menus.forEach(menu => menu.classList.remove('open'));
+				openMenu = null;
+			}
+
+			function openMenuPanel(menu) {
+				if (openMenu === menu) {
+					return;
+				}
+				closeMenus();
+				menu.classList.add('open');
+				openMenu = menu;
+			}
+
+			menus.forEach(menu => {
+				const trigger = menu.querySelector('.gem-menubar-item');
+
+				trigger.addEventListener('click', function(event) {
+					event.stopPropagation();
+					if (openMenu === menu) {
+						closeMenus();
+						return;
+					}
+					openMenuPanel(menu);
+				});
+
+				menu.addEventListener('mouseenter', function() {
+					if (!openMenu) {
+						return;
+					}
+					openMenuPanel(menu);
+				});
+			});
+
+			document.querySelectorAll('.gem-menu-entry').forEach(entry => {
+				entry.addEventListener('click', function(event) {
+					event.stopPropagation();
+					if (this.classList.contains('disabled')) {
+						return;
+					}
+					closeMenus();
+				});
+			});
+
+			document.addEventListener('click', function(event) {
+				if (!menuLeft.contains(event.target)) {
+					closeMenus();
+				}
+			});
+
+			document.addEventListener('keydown', function(event) {
+				if (event.key === 'Escape') {
+					closeMenus();
+				}
 			});
 
 			// Simple Canvas Init (keeps it visually white instead of transparent)
