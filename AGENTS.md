@@ -10,6 +10,7 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
 
 ## UI/UX Direction
 - The website shall mimic an **ancient Atari GEM-like GUI**.
+- Use **proper GEM-style English text** for all visible GUI labels, menus, and captions.
 - Favor classic windowed desktop styling:
   - flat grayscale panels,
   - beveled borders,
@@ -17,4 +18,3 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
   - retro menu/toolbox layout,
   - minimal modern visual effects.
 - Prioritize usability for pixel-art / retro paint workflows while preserving the GEM aesthetic.
-
