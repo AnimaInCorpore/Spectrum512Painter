@@ -5,6 +5,16 @@ function normalizeFileName(fileName) {
 	return fileName.trim().toUpperCase();
 }
 
+function getImageDimensions(source) {
+	if (!source) {
+		return { width: 0, height: 0 };
+	}
+	return {
+		width: source.naturalWidth || source.width || 0,
+		height: source.naturalHeight || source.height || 0
+	};
+}
+
 export function createCanvasDocument({ canvas, titleElement }) {
 	const context = canvas.getContext('2d');
 	let currentFileName = 'UNTITLED';
@@ -22,9 +32,12 @@ export function createCanvasDocument({ canvas, titleElement }) {
 	};
 
 	const setImage = ({ image, fileName }) => {
-		canvas.width = image.naturalWidth;
-		canvas.height = image.naturalHeight;
-		context.drawImage(image, 0, 0);
+		const { width: imageWidth, height: imageHeight } = getImageDimensions(image);
+		const targetWidth = Math.max(1, imageWidth || canvas.width);
+		const targetHeight = Math.max(1, imageHeight || canvas.height);
+		canvas.width = targetWidth;
+		canvas.height = targetHeight;
+		context.drawImage(image, 0, 0, targetWidth, targetHeight);
 		setTitle(fileName);
 	};
 

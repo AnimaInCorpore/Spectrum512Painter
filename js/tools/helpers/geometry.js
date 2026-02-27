@@ -1,8 +1,10 @@
 export function canvasPointFromMouse(event, canvas) {
 	const rect = canvas.getBoundingClientRect();
+	const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+	const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
 	return {
-		x: Math.floor(event.clientX - rect.left),
-		y: Math.floor(event.clientY - rect.top)
+		x: Math.floor((event.clientX - rect.left) * scaleX),
+		y: Math.floor((event.clientY - rect.top) * scaleY)
 	};
 }
 
