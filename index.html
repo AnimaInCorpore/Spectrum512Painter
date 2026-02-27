@@ -331,11 +331,14 @@
 		}
 
 		#paint {
+			position: absolute;
+			top: 0;
+			left: 0;
 			display: block;
 			image-rendering: pixelated;
 			cursor: crosshair;
-			width: 100%;
-			height: 100%;
+			max-width: none;
+			max-height: none;
 		}
 
 		/* Scrollbars */
@@ -538,7 +541,7 @@
 				<button type="button" class="gem-menubar-item">File</button>
 				<div class="gem-dropdown">
 					<button type="button" class="gem-menu-entry"><span>New</span><span class="gem-menu-shortcut">N</span></button>
-					<button type="button" class="gem-menu-entry"><span>Open...</span><span class="gem-menu-shortcut">O</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-file-open"><span>Open...</span><span class="gem-menu-shortcut">O</span></button>
 					<button type="button" class="gem-menu-entry"><span>Merge...</span><span class="gem-menu-shortcut">M</span></button>
 					<div class="gem-menu-separator"></div>
 					<button type="button" class="gem-menu-entry"><span>Save</span><span class="gem-menu-shortcut">S</span></button>
@@ -585,7 +588,7 @@
 
 			<div class="gem-titlebar">
 				<div class="gem-titlebar-close"></div>
-				<div class="gem-titlebar-name">A:\IMAGES\TIGER.IMG</div>
+				<div class="gem-titlebar-name"></div>
 				<div class="gem-titlebar-full"></div>
 			</div>
 
@@ -666,6 +669,7 @@
 		</div>
 	</div>
 
+	<input type="file" id="file-open" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" style="display:none">
 	<script>
 		(function() {
 			// Populate the 21 patterns to match the 3x7 grid visible in the reference image
@@ -771,7 +775,207 @@
 			const ctx = canvas.getContext('2d');
 			ctx.fillStyle = '#ffffff';
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
-			
+
+			// Canvas viewport scrolling (custom GEM-style scrollbars)
+			const canvasContainer = document.querySelector('.gem-canvas-container');
+			const verticalScrollbar = document.querySelector('.gem-scrollbar.vertical');
+			const horizontalScrollbar = document.querySelector('.gem-scrollbar.horizontal');
+			const vTrack = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-track') : null;
+			const hTrack = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-track') : null;
+			const vThumb = vTrack ? vTrack.querySelector('.gem-sb-thumb') : null;
+			const hThumb = hTrack ? hTrack.querySelector('.gem-sb-thumb') : null;
+			const vBtnUp = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-btn.up') : null;
+			const vBtnDown = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-btn.down') : null;
+			const hBtnLeft = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-btn.left') : null;
+			const hBtnRight = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-btn.right') : null;
+
+			const MIN_THUMB_SIZE = 16;
+			const LINE_SCROLL = 16;
+			let scrollX = 0;
+			let scrollY = 0;
+			let maxScrollX = 0;
+			let maxScrollY = 0;
+			let hThumbSize = 0;
+			let vThumbSize = 0;
+
+			function clamp(value, min, max) {
+				return Math.min(max, Math.max(min, value));
+			}
+
+			function updateCanvasOffset() {
+				canvas.style.left = (-scrollX) + 'px';
+				canvas.style.top = (-scrollY) + 'px';
+			}
+
+			function updateScrollbarThumbs() {
+				if (!hTrack || !vTrack || !hThumb || !vThumb) {
+					return;
+				}
+
+				const viewportW = canvasContainer.clientWidth;
+				const viewportH = canvasContainer.clientHeight;
+				const contentW = canvas.width;
+				const contentH = canvas.height;
+				const hTrackSize = hTrack.clientWidth;
+				const vTrackSize = vTrack.clientHeight;
+
+				hThumbSize = (maxScrollX === 0) ? hTrackSize : Math.max(MIN_THUMB_SIZE, Math.round((viewportW / contentW) * hTrackSize));
+				vThumbSize = (maxScrollY === 0) ? vTrackSize : Math.max(MIN_THUMB_SIZE, Math.round((viewportH / contentH) * vTrackSize));
+				hThumbSize = Math.min(hThumbSize, hTrackSize);
+				vThumbSize = Math.min(vThumbSize, vTrackSize);
+
+				const hRange = Math.max(0, hTrackSize - hThumbSize);
+				const vRange = Math.max(0, vTrackSize - vThumbSize);
+				const hPos = (maxScrollX === 0) ? 0 : Math.round((scrollX / maxScrollX) * hRange);
+				const vPos = (maxScrollY === 0) ? 0 : Math.round((scrollY / maxScrollY) * vRange);
+
+				hThumb.style.width = hThumbSize + 'px';
+				hThumb.style.left = hPos + 'px';
+				vThumb.style.height = vThumbSize + 'px';
+				vThumb.style.top = vPos + 'px';
+			}
+
+			function recalcScrollBounds() {
+				if (!canvasContainer) {
+					return;
+				}
+				maxScrollX = Math.max(0, canvas.width - canvasContainer.clientWidth);
+				maxScrollY = Math.max(0, canvas.height - canvasContainer.clientHeight);
+				scrollX = clamp(scrollX, 0, maxScrollX);
+				scrollY = clamp(scrollY, 0, maxScrollY);
+				updateCanvasOffset();
+				updateScrollbarThumbs();
+			}
+
+			function scrollToPosition(nextX, nextY) {
+				const clampedX = clamp(Math.round(nextX), 0, maxScrollX);
+				const clampedY = clamp(Math.round(nextY), 0, maxScrollY);
+				if (clampedX === scrollX && clampedY === scrollY) {
+					return;
+				}
+				scrollX = clampedX;
+				scrollY = clampedY;
+				updateCanvasOffset();
+				updateScrollbarThumbs();
+			}
+
+			function scrollBy(deltaX, deltaY) {
+				scrollToPosition(scrollX + deltaX, scrollY + deltaY);
+			}
+
+			function setupScrollbarEvents() {
+				if (!hTrack || !vTrack || !hThumb || !vThumb) {
+					return;
+				}
+
+				if (vBtnUp) vBtnUp.addEventListener('click', function() { scrollBy(0, -LINE_SCROLL); });
+				if (vBtnDown) vBtnDown.addEventListener('click', function() { scrollBy(0, LINE_SCROLL); });
+				if (hBtnLeft) hBtnLeft.addEventListener('click', function() { scrollBy(-LINE_SCROLL, 0); });
+				if (hBtnRight) hBtnRight.addEventListener('click', function() { scrollBy(LINE_SCROLL, 0); });
+
+				vTrack.addEventListener('mousedown', function(event) {
+					if (event.target === vThumb) return;
+					const rect = vTrack.getBoundingClientRect();
+					const clickY = event.clientY - rect.top;
+					const thumbTop = vThumb.offsetTop;
+					const pageStep = Math.max(1, canvasContainer.clientHeight - LINE_SCROLL);
+					scrollBy(0, clickY < thumbTop ? -pageStep : pageStep);
+				});
+
+				hTrack.addEventListener('mousedown', function(event) {
+					if (event.target === hThumb) return;
+					const rect = hTrack.getBoundingClientRect();
+					const clickX = event.clientX - rect.left;
+					const thumbLeft = hThumb.offsetLeft;
+					const pageStep = Math.max(1, canvasContainer.clientWidth - LINE_SCROLL);
+					scrollBy(clickX < thumbLeft ? -pageStep : pageStep, 0);
+				});
+
+				function beginThumbDrag(axis, event) {
+					event.preventDefault();
+					const startClient = (axis === 'x') ? event.clientX : event.clientY;
+					const startScroll = (axis === 'x') ? scrollX : scrollY;
+					const trackSize = (axis === 'x') ? hTrack.clientWidth : vTrack.clientHeight;
+					const thumbSize = (axis === 'x') ? hThumbSize : vThumbSize;
+					const scrollMax = (axis === 'x') ? maxScrollX : maxScrollY;
+					const dragRange = Math.max(1, trackSize - thumbSize);
+
+					function onMove(moveEvent) {
+						const currentClient = (axis === 'x') ? moveEvent.clientX : moveEvent.clientY;
+						const delta = currentClient - startClient;
+						if (scrollMax === 0) {
+							return;
+						}
+						const nextScroll = startScroll + (delta / dragRange) * scrollMax;
+						if (axis === 'x') {
+							scrollToPosition(nextScroll, scrollY);
+						} else {
+							scrollToPosition(scrollX, nextScroll);
+						}
+					}
+
+					function onUp() {
+						document.removeEventListener('mousemove', onMove);
+						document.removeEventListener('mouseup', onUp);
+					}
+
+					document.addEventListener('mousemove', onMove);
+					document.addEventListener('mouseup', onUp);
+				}
+
+				hThumb.addEventListener('mousedown', function(event) {
+					beginThumbDrag('x', event);
+				});
+
+				vThumb.addEventListener('mousedown', function(event) {
+					beginThumbDrag('y', event);
+				});
+
+				canvasContainer.addEventListener('wheel', function(event) {
+					if (maxScrollX === 0 && maxScrollY === 0) {
+						return;
+					}
+					event.preventDefault();
+					scrollBy(event.deltaX, event.deltaY);
+				}, { passive: false });
+			}
+
+			setupScrollbarEvents();
+			window.addEventListener('resize', recalcScrollBounds);
+			recalcScrollBounds();
+
+			// File loading
+			const fileInput = document.getElementById('file-open');
+			const openMenuItem = document.getElementById('menu-file-open');
+
+			if (fileInput && openMenuItem) {
+				openMenuItem.addEventListener('click', function() {
+					fileInput.click();
+				});
+
+				fileInput.addEventListener('change', function() {
+					const file = this.files[0];
+					if (!file) return;
+					const reader = new FileReader();
+					reader.onload = function(e) {
+						const img = new Image();
+						img.onload = function() {
+							canvas.width = img.naturalWidth;
+							canvas.height = img.naturalHeight;
+							ctx.drawImage(img, 0, 0);
+							document.querySelector('.gem-titlebar-name').textContent =
+								file.name.toUpperCase();
+							scrollX = 0;
+							scrollY = 0;
+							recalcScrollBounds();
+						};
+						img.src = e.target.result;
+					};
+					reader.readAsDataURL(file);
+					this.value = '';
+				});
+			}
+
 		})();
 	</script>
 </body>
