@@ -41,6 +41,7 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
   - retro menu/toolbox layout,
   - minimal modern visual effects.
 - Prioritize usability for pixel-art / retro paint workflows while preserving the GEM aesthetic.
+- Follow full GUI rules in `doc/CLASSIC_GUI_GUIDELINES.md` for menus, dialogs, icons, controls, and window behavior.
 
 ## Tool Behavior Reference (MacPaint-derived)
 GEM Paint was modeled after MacPaint. Use MacPaint as the authoritative reference for tool behavior. The GEM visual style (see above) always takes precedence over any Mac-specific aesthetics.
@@ -75,3 +76,4 @@ GEM Paint was modeled after MacPaint. Use MacPaint as the authoritative referenc
 - The canvas is larger than the visible viewport and is scrollable via a Hand tool or scrollbars.
 - Zoom levels should range from at least 1× to 8× (FatBits). Lower zoom-out levels are also useful for overview.
 - Shift is the universal constraint modifier: straight lines, square shapes, circular ovals.
+- Follow classic scrollbar/window behavior guidance in `doc/CLASSIC_SCROLLBAR_BEHAVIOR.md`.

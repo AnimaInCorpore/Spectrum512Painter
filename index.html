@@ -84,6 +84,7 @@
 			top: 20px;
 			left: 0;
 			min-width: 150px;
+			width: max-content;
 			background: var(--white);
 			border: 2px solid var(--black);
 			z-index: 50;
@@ -106,6 +107,7 @@
 			align-items: center;
 			justify-content: space-between;
 			text-align: left;
+			white-space: nowrap;
 			cursor: pointer;
 		}
 
@@ -317,10 +319,12 @@
 		/* ===== CENTER PANEL (Canvas & Scrollbars) ===== */
 		.gem-canvas-area {
 			display: grid;
-			grid-template-columns: 1fr 17px;
-			grid-template-rows: 1fr 17px;
+			grid-template-columns: 1fr 0;
+			grid-template-rows: 1fr 0;
 			background: var(--white);
 		}
+		.gem-canvas-area.show-vertical-scrollbar { grid-template-columns: 1fr 17px; }
+		.gem-canvas-area.show-horizontal-scrollbar { grid-template-rows: 1fr 17px; }
 
 		.gem-canvas-container {
 			border-right: 2px solid var(--black);
@@ -344,8 +348,10 @@
 		/* Scrollbars */
 		.gem-scrollbar {
 			background: var(--white);
-			display: flex;
+			display: none;
 		}
+		.gem-canvas-area.show-vertical-scrollbar .gem-scrollbar.vertical { display: flex; }
+		.gem-canvas-area.show-horizontal-scrollbar .gem-scrollbar.horizontal { display: flex; }
 
 		.gem-scrollbar.vertical {
 			flex-direction: column;
@@ -415,13 +421,14 @@
 			width: 17px;
 			height: 17px;
 			background: var(--white); 
-			display: flex;
+			display: none;
 			align-items: flex-end;
 			justify-content: flex-end;
 			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAATklEQVR4Aa3BwQ2AMAADsUvU/VcOPBFqKYjYyomfTIEpGExI4i4JK6bAFJgCU2AKTIH5QBIzg4kkXEniiXkhCZJYGWxIYmewkYQdU2AKDqz1ECnYW1chAAAAAElFTkSuQmCC');
 			background-repeat: no-repeat;
 			background-position: center;
 		}
+		.gem-canvas-area.show-horizontal-scrollbar.show-vertical-scrollbar .gem-sb-corner { display: flex; }
 
 		/* ===== RIGHT PANEL (Patterns) ===== */
 		.gem-right-panel {

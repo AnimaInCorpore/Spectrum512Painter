@@ -1,11 +1,13 @@
 const MIN_THUMB_SIZE = 16;
 const LINE_SCROLL = 16;
+const SCROLLBAR_SIZE = 17;
 
 function clamp(value, min, max) {
 	return Math.min(max, Math.max(min, value));
 }
 
 export function createViewportScroller({ canvas, canvasContainer, verticalScrollbar, horizontalScrollbar }) {
+	const canvasArea = canvasContainer ? canvasContainer.parentElement : null;
 	const vTrack = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-track') : null;
 	const hTrack = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-track') : null;
 	const vThumb = vTrack ? vTrack.querySelector('.gem-sb-thumb') : null;
@@ -22,6 +24,47 @@ export function createViewportScroller({ canvas, canvasContainer, verticalScroll
 	let hThumbSize = 0;
 	let vThumbSize = 0;
 
+	const getContentSize = () => {
+		const rect = canvas.getBoundingClientRect();
+		const width = rect.width > 0 ? rect.width : canvas.width;
+		const height = rect.height > 0 ? rect.height : canvas.height;
+		return {
+			width: Math.round(width),
+			height: Math.round(height)
+		};
+	};
+
+	const setScrollbarVisibility = ({ showHorizontal, showVertical }) => {
+		if (canvasArea) {
+			canvasArea.classList.toggle('show-horizontal-scrollbar', showHorizontal);
+			canvasArea.classList.toggle('show-vertical-scrollbar', showVertical);
+		}
+	};
+
+	const computeScrollbarVisibility = contentSize => {
+		if (!canvasArea) {
+			return {
+				showHorizontal: true,
+				showVertical: true
+			};
+		}
+
+		const areaWidth = canvasArea.clientWidth;
+		const areaHeight = canvasArea.clientHeight;
+
+		let showHorizontal = contentSize.width > areaWidth;
+		let showVertical = contentSize.height > areaHeight;
+
+		if (showVertical && !showHorizontal && contentSize.width > areaWidth - SCROLLBAR_SIZE) {
+			showHorizontal = true;
+		}
+		if (showHorizontal && !showVertical && contentSize.height > areaHeight - SCROLLBAR_SIZE) {
+			showVertical = true;
+		}
+
+		return { showHorizontal, showVertical };
+	};
+
 	const updateCanvasOffset = () => {
 		canvas.style.left = `${-scrollX}px`;
 		canvas.style.top = `${-scrollY}px`;
@@ -34,8 +77,9 @@ export function createViewportScroller({ canvas, canvasContainer, verticalScroll
 
 		const viewportW = canvasContainer.clientWidth;
 		const viewportH = canvasContainer.clientHeight;
-		const contentW = canvas.width;
-		const contentH = canvas.height;
+		const contentSize = getContentSize();
+		const contentW = contentSize.width;
+		const contentH = contentSize.height;
 		const hTrackSize = hTrack.clientWidth;
 		const vTrackSize = vTrack.clientHeight;
 
@@ -63,8 +107,11 @@ export function createViewportScroller({ canvas, canvasContainer, verticalScroll
 		if (!canvasContainer) {
 			return;
 		}
-		maxScrollX = Math.max(0, canvas.width - canvasContainer.clientWidth);
-		maxScrollY = Math.max(0, canvas.height - canvasContainer.clientHeight);
+		const contentSize = getContentSize();
+		setScrollbarVisibility(computeScrollbarVisibility(contentSize));
+
+		maxScrollX = Math.max(0, contentSize.width - canvasContainer.clientWidth);
+		maxScrollY = Math.max(0, contentSize.height - canvasContainer.clientHeight);
 		scrollX = clamp(scrollX, 0, maxScrollX);
 		scrollY = clamp(scrollY, 0, maxScrollY);
 		updateCanvasOffset();
