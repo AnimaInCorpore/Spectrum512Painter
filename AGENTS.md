@@ -24,6 +24,13 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
 - `js/formats/*`: file format encode/decode modules (for example Spectrum512 readers/writers and related bitmap import/export codecs).
 - `js/config/*`: shared static configuration (for example pattern class lists).
 
+### GEM IMG/XIMG Format Notes
+- Treat GEM IMG support as a family of variants: classic monochrome/palette planes and extended XIMG variants.
+- Keep decoding logic modular in `js/formats/*` so plane-format handlers can be extended without large monolithic functions.
+- True-color variants exist in extended XIMG usage (not only 1-plane or indexed formats), including higher plane-count encodings.
+- Current implementation status:
+  - Supported now: 1..8 indexed planes, 16-plane true-color (5:6:5 pseudo-planes), 24-plane true-color (8:8:8 pseudo-planes), documented RLE items, vertical replication marker, optional XIMG palette block when present.
+
 ## UI/UX Direction
 - The website shall mimic an **ancient Atari GEM-like GUI**.
 - Use **proper GEM-style English text** for all visible GUI labels, menus, and captions.

@@ -53,6 +53,10 @@ setupFileLoading({
 	onImageLoaded: ({ image, fileName }) => {
 		canvasDocument.setImage({ image, fileName });
 		viewportScroller.resetPosition();
+	},
+	onBitmapLoaded: ({ width, height, pixels, fileName }) => {
+		canvasDocument.setPixelBuffer({ width, height, pixels, fileName });
+		viewportScroller.resetPosition();
 	}
 });
 

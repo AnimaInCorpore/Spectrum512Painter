@@ -28,6 +28,14 @@ export function createCanvasDocument({ canvas, titleElement }) {
 		setTitle(fileName);
 	};
 
+	const setPixelBuffer = ({ width, height, pixels, fileName }) => {
+		canvas.width = width;
+		canvas.height = height;
+		const imageData = new ImageData(pixels, width, height);
+		context.putImageData(imageData, 0, 0);
+		setTitle(fileName);
+	};
+
 	const getDownloadBaseName = () => {
 		const withoutExtension = currentFileName.replace(/\.[A-Z0-9]+$/, '');
 		return withoutExtension || 'UNTITLED';
@@ -41,6 +49,7 @@ export function createCanvasDocument({ canvas, titleElement }) {
 		context,
 		fillWhite,
 		setImage,
+		setPixelBuffer,
 		setTitle,
 		getDownloadBaseName
 	};
