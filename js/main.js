@@ -119,8 +119,7 @@ function computeSpectrumScale() {
 }
 
 function applyDisplayScale() {
-	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH
-		&& (canvas.height === SPECTRUM_CANVAS_HEIGHT || canvas.height === SPECTRUM_CANVAS_HEIGHT - 1);
+	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH && canvas.height === SPECTRUM_CANVAS_HEIGHT;
 	if (!spectrum512Enabled || !isSpectrumCanvas) {
 		canvas.style.width = '';
 		canvas.style.height = '';
@@ -158,6 +157,14 @@ function shouldBypassSpectrumResize() {
 	);
 }
 
+function isSpuSourceLoaded() {
+	return Boolean(
+		lastLoadedSource
+		&& lastLoadedSource.type === 'bitmap'
+		&& lastLoadedSource.sourceFormat === 'spu'
+	);
+}
+
 function getBaseSourceForSpectrum() {
 	if (!lastLoadedSource) {
 		return null;
@@ -186,13 +193,20 @@ function scheduleSpectrumDirtyConversion(session, minY, maxY) {
 			session.dirtyMaxY = null;
 			return;
 		}
-		convertSpectrum512Lines({
-			sourceCanvas: session.baseCanvas,
-			targetCanvas: canvas,
-			yStart: session.dirtyMinY,
-			yEnd: session.dirtyMaxY,
-			options: getSpectrumConversionOptions()
-		});
+		if (session.isPassthrough) {
+			const y = session.dirtyMinY;
+			const height = session.dirtyMaxY - session.dirtyMinY + 1;
+			const imageData = session.baseContext.getImageData(0, y, session.baseCanvas.width, height);
+			canvasDocument.context.putImageData(imageData, 0, y);
+		} else {
+			convertSpectrum512Lines({
+				sourceCanvas: session.baseCanvas,
+				targetCanvas: canvas,
+				yStart: session.dirtyMinY,
+				yEnd: session.dirtyMaxY,
+				options: getSpectrumConversionOptions()
+			});
+		}
 		session.dirtyMinY = null;
 		session.dirtyMaxY = null;
 	});
@@ -237,6 +251,7 @@ function createSpectrumSession() {
 		revision: sourceRevision,
 		baseCanvas,
 		baseContext,
+		isPassthrough: isSpuSourceLoaded(),
 		drawContext: null,
 		dirtyMinY: null,
 		dirtyMaxY: null,
@@ -264,13 +279,15 @@ function renderSpectrumSession({ resetScroll = true } = {}) {
 		image: session.baseCanvas,
 		fileName: lastLoadedSource ? lastLoadedSource.fileName : 'UNTITLED'
 	});
-	convertSpectrum512Lines({
-		sourceCanvas: session.baseCanvas,
-		targetCanvas: canvas,
-		yStart: 0,
-		yEnd: SPECTRUM_CANVAS_HEIGHT - 1,
-		options: getSpectrumConversionOptions()
-	});
+	if (!session.isPassthrough) {
+		convertSpectrum512Lines({
+			sourceCanvas: session.baseCanvas,
+			targetCanvas: canvas,
+			yStart: 0,
+			yEnd: SPECTRUM_CANVAS_HEIGHT - 1,
+			options: getSpectrumConversionOptions()
+		});
+	}
 	applyDisplayScale();
 	if (resetScroll && viewportScroller) {
 		viewportScroller.resetPosition();

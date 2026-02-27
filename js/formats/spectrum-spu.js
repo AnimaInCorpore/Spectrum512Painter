@@ -8,7 +8,6 @@ import {
 const SPU_GRAPHICS_BYTES = (SPECTRUM_CANVAS_WIDTH * SPECTRUM_CANVAS_HEIGHT) / 2;
 const SPU_PALETTE_BYTES = 48 * 2 * (SPECTRUM_CANVAS_HEIGHT - 1);
 const SPU_TOTAL_BYTES = SPU_GRAPHICS_BYTES + SPU_PALETTE_BYTES;
-const SPU_ACTIVE_HEIGHT = SPECTRUM_CANVAS_HEIGHT - 1;
 
 function createCanvasClone(sourceCanvas) {
 	const canvas = document.createElement('canvas');
@@ -21,17 +20,6 @@ function createCanvasClone(sourceCanvas) {
 function createNormalizedSpuSource(sourceCanvas) {
 	if (sourceCanvas.width === SPECTRUM_CANVAS_WIDTH && sourceCanvas.height === SPECTRUM_CANVAS_HEIGHT) {
 		return createCanvasClone(sourceCanvas);
-	}
-
-	// SPU files typically carry visible content on raster lines 1..199.
-	if (sourceCanvas.width === SPECTRUM_CANVAS_WIDTH && sourceCanvas.height === SPU_ACTIVE_HEIGHT) {
-		const canvas = document.createElement('canvas');
-		canvas.width = SPECTRUM_CANVAS_WIDTH;
-		canvas.height = SPECTRUM_CANVAS_HEIGHT;
-		const context = canvas.getContext('2d');
-		context.clearRect(0, 0, canvas.width, canvas.height);
-		context.drawImage(sourceCanvas, 0, 1);
-		return canvas;
 	}
 
 	return createSpectrumCanvas(sourceCanvas);
@@ -104,16 +92,25 @@ function inferBitsPerColor(data, paletteOffset) {
 		return 5;
 	}
 
+	// No explicit marker exists for 3-bit vs 4-bit SPU in the classic layout.
+	// Be conservative and default to 4-bit unless the palette is clearly 3-bit only.
 	let allEvenNibbles = true;
+	let hasFullNibbleValue = false;
 	for (let i = paletteOffset; i < data.length; i += 2) {
 		const word = (data[i] << 8) | data[i + 1];
 		const unpacked = unpackSpuColorWord(word, 4);
+		if (unpacked.redNibble === 0x0f || unpacked.greenNibble === 0x0f || unpacked.blueNibble === 0x0f) {
+			hasFullNibbleValue = true;
+		}
 		if ((unpacked.redNibble & 1) !== 0 || (unpacked.greenNibble & 1) !== 0 || (unpacked.blueNibble & 1) !== 0) {
 			allEvenNibbles = false;
 			break;
 		}
 	}
-	return allEvenNibbles ? 3 : 4;
+	if (allEvenNibbles && !hasFullNibbleValue) {
+		return 3;
+	}
+	return 4;
 }
 
 function unpackWordColorBits(word) {
@@ -168,7 +165,6 @@ function unpackSpuColorWord(word, bitsPerColor) {
 
 function decodePalettes(data, bitsPerColor) {
 	const lineSlots = new Array(SPECTRUM_CANVAS_HEIGHT);
-	lineSlots[0] = new Array(48).fill(null).map(() => ({ red: 0, green: 0, blue: 0 }));
 
 	let offset = SPU_GRAPHICS_BYTES;
 	for (let y = 1; y < SPECTRUM_CANVAS_HEIGHT; y += 1) {
@@ -181,6 +177,7 @@ function decodePalettes(data, bitsPerColor) {
 		}
 		lineSlots[y] = slots;
 	}
+	lineSlots[0] = lineSlots[1] || new Array(48).fill(null).map(() => ({ red: 0, green: 0, blue: 0 }));
 
 	return lineSlots;
 }
@@ -208,26 +205,35 @@ export function decodeSpectrumSpu(arrayBuffer) {
 
 	const bitsPerColor = inferBitsPerColor(data, SPU_GRAPHICS_BYTES);
 	const lineSlots = decodePalettes(data, bitsPerColor);
-	const pixels = new Uint8ClampedArray(SPECTRUM_CANVAS_WIDTH * SPU_ACTIVE_HEIGHT * 4);
+	const pixels = new Uint8ClampedArray(SPECTRUM_CANVAS_WIDTH * SPECTRUM_CANVAS_HEIGHT * 4);
 
 	for (let y = 1; y < SPECTRUM_CANVAS_HEIGHT; y += 1) {
 		const slots = lineSlots[y] || lineSlots[1] || lineSlots[0];
-		const outputY = y - 1;
 		for (let x = 0; x < SPECTRUM_CANVAS_WIDTH; x += 1) {
 			const colorIndex = decodeColorIndex(data, x, y);
 			const slotIndex = getSpectrum512ColorSlotIndex(x, colorIndex);
 			const color = slots[slotIndex] || { red: 0, green: 0, blue: 0 };
-			const pixelIndex = (x + outputY * SPECTRUM_CANVAS_WIDTH) * 4;
+			const pixelIndex = (x + y * SPECTRUM_CANVAS_WIDTH) * 4;
 			pixels[pixelIndex] = color.red;
 			pixels[pixelIndex + 1] = color.green;
 			pixels[pixelIndex + 2] = color.blue;
 			pixels[pixelIndex + 3] = 255;
 		}
 	}
+	// The first raster line is not reliably represented in SPU payload metadata.
+	// Mirror line 1 to line 0 for stable display and save/load round-trips.
+	for (let x = 0; x < SPECTRUM_CANVAS_WIDTH; x += 1) {
+		const srcIndex = (x + 1 * SPECTRUM_CANVAS_WIDTH) * 4;
+		const dstIndex = x * 4;
+		pixels[dstIndex] = pixels[srcIndex];
+		pixels[dstIndex + 1] = pixels[srcIndex + 1];
+		pixels[dstIndex + 2] = pixels[srcIndex + 2];
+		pixels[dstIndex + 3] = 255;
+	}
 
 	return {
 		width: SPECTRUM_CANVAS_WIDTH,
-		height: SPU_ACTIVE_HEIGHT,
+		height: SPECTRUM_CANVAS_HEIGHT,
 		pixels,
 		bitsPerColor
 	};
