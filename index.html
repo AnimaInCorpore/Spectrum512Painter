@@ -544,9 +544,9 @@
 					<button type="button" class="gem-menu-entry" id="menu-file-open"><span>Open...</span><span class="gem-menu-shortcut">O</span></button>
 					<button type="button" class="gem-menu-entry"><span>Merge...</span><span class="gem-menu-shortcut">M</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry"><span>Save</span><span class="gem-menu-shortcut">S</span></button>
-					<button type="button" class="gem-menu-entry">Save As...</button>
-					<button type="button" class="gem-menu-entry">Export...</button>
+					<button type="button" class="gem-menu-entry" id="menu-file-save"><span>Save</span><span class="gem-menu-shortcut">S</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-file-save-as">Save As...</button>
+					<button type="button" class="gem-menu-entry" id="menu-file-export">Export...</button>
 					<div class="gem-menu-separator"></div>
 					<button type="button" class="gem-menu-entry">Quit</button>
 				</div>
@@ -596,25 +596,25 @@
 				<div class="gem-tools-panel">
 					<div class="gem-tools-grid">
 						
-						<button class="gem-tool-btn" title="Microscope (Zoom)"><div class="gem-sprite tool-0-0"></div></button>
-						<button class="gem-tool-btn" title="Marquee"><div class="gem-sprite tool-1-0"></div></button>
-						<button class="gem-tool-btn" title="Text"><div class="gem-sprite tool-2-0"></div></button>
+						<button class="gem-tool-btn" data-tool="zoom" title="Microscope (Zoom)"><div class="gem-sprite tool-0-0"></div></button>
+						<button class="gem-tool-btn" data-tool="marquee" title="Marquee"><div class="gem-sprite tool-1-0"></div></button>
+						<button class="gem-tool-btn" data-tool="text" title="Text"><div class="gem-sprite tool-2-0"></div></button>
 
-						<button class="gem-tool-btn active" title="Pencil"><div class="gem-sprite tool-0-1"></div></button>
-						<button class="gem-tool-btn" title="Eraser"><div class="gem-sprite tool-1-1"></div></button>
-						<button class="gem-tool-btn" title="Line"><div class="gem-sprite tool-2-1"></div></button>
+						<button class="gem-tool-btn active" data-tool="pencil" title="Pencil"><div class="gem-sprite tool-0-1"></div></button>
+						<button class="gem-tool-btn" data-tool="eraser" title="Eraser"><div class="gem-sprite tool-1-1"></div></button>
+						<button class="gem-tool-btn" data-tool="line" title="Line"><div class="gem-sprite tool-2-1"></div></button>
 
-						<button class="gem-tool-btn" title="Fill"><div class="gem-sprite tool-0-2"></div></button>
-						<button class="gem-tool-btn" title="Spray"><div class="gem-sprite tool-1-2"></div></button>
-						<button class="gem-tool-btn" title="Faucet"><div class="gem-sprite tool-2-2"></div></button>
+						<button class="gem-tool-btn" data-tool="fill" title="Fill"><div class="gem-sprite tool-0-2"></div></button>
+						<button class="gem-tool-btn" data-tool="spray" title="Spray"><div class="gem-sprite tool-1-2"></div></button>
+						<button class="gem-tool-btn" data-tool="faucet" title="Faucet"><div class="gem-sprite tool-2-2"></div></button>
 
-						<button class="gem-tool-btn" title="Rectangle"><div class="gem-sprite tool-0-3"></div></button>
-						<button class="gem-tool-btn" title="Rounded Rectangle"><div class="gem-sprite tool-1-3"></div></button>
-						<button class="gem-tool-btn" title="Polygon"><div class="gem-sprite tool-2-3"></div></button>
+						<button class="gem-tool-btn" data-tool="rectangle" title="Rectangle"><div class="gem-sprite tool-0-3"></div></button>
+						<button class="gem-tool-btn" data-tool="rounded-rectangle" title="Rounded Rectangle"><div class="gem-sprite tool-1-3"></div></button>
+						<button class="gem-tool-btn" data-tool="polygon" title="Polygon"><div class="gem-sprite tool-2-3"></div></button>
 
-						<button class="gem-tool-btn" title="Pie Slice"><div class="gem-sprite tool-0-4"></div></button>
-						<button class="gem-tool-btn" title="Ellipse"><div class="gem-sprite tool-1-4"></div></button>
-						<button class="gem-tool-btn" title="Freehand"><div class="gem-sprite tool-2-4"></div></button>
+						<button class="gem-tool-btn" data-tool="pie-slice" title="Pie Slice"><div class="gem-sprite tool-0-4"></div></button>
+						<button class="gem-tool-btn" data-tool="ellipse" title="Ellipse"><div class="gem-sprite tool-1-4"></div></button>
+						<button class="gem-tool-btn" data-tool="freehand" title="Freehand"><div class="gem-sprite tool-2-4"></div></button>
 
 					</div>
 
@@ -670,313 +670,6 @@
 	</div>
 
 	<input type="file" id="file-open" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" style="display:none">
-	<script>
-		(function() {
-			// Populate the 21 patterns to match the 3x7 grid visible in the reference image
-			const patternsGrid = document.getElementById('patterns-grid');
-			
-			const patternClasses = [
-				'gem-sprite pat-0-0', 'gem-sprite pat-1-0', 'gem-sprite pat-2-0',
-				'gem-sprite pat-0-1', 'gem-sprite pat-1-1', 'gem-sprite pat-2-1',
-				'gem-sprite pat-0-2', 'gem-sprite pat-1-2', 'gem-sprite pat-2-2',
-				'gem-sprite pat-0-3', 'gem-sprite pat-1-3', 'gem-sprite pat-2-3',
-				'gem-sprite pat-0-4', 'gem-sprite pat-1-4', 'gem-sprite pat-2-4',
-				'gem-sprite pat-0-5', 'gem-sprite pat-1-5', 'gem-sprite pat-2-5',
-				'gem-sprite pat-0-6', 'gem-sprite pat-1-6', 'gem-sprite pat-2-6'
-			];
-
-			patternClasses.forEach((cls, i) => {
-				const div = document.createElement('div');
-				div.className = 'gem-pattern';
-				const inner = document.createElement('div');
-				inner.className = cls;
-				div.appendChild(inner);
-				if (i === 0) div.classList.add('active'); // Set default active
-
-				div.addEventListener('click', function() {
-					document.querySelectorAll('.gem-pattern').forEach(p => p.classList.remove('active'));
-					this.classList.add('active');
-				});
-				patternsGrid.appendChild(div);
-			});
-
-
-			// Tool Selection Logic
-			document.querySelectorAll('.gem-tool-btn').forEach(btn => {
-				btn.addEventListener('click', function() {
-					document.querySelectorAll('.gem-tool-btn').forEach(n => n.classList.remove('active'));
-					this.classList.add('active');
-				});
-			});
-
-			// GEM-style menu bar behavior
-			const menuLeft = document.querySelector('.menu-left');
-			const menus = Array.from(document.querySelectorAll('.gem-menu'));
-			let openMenu = null;
-
-			function closeMenus() {
-				menus.forEach(menu => menu.classList.remove('open'));
-				openMenu = null;
-			}
-
-			function openMenuPanel(menu) {
-				if (openMenu === menu) {
-					return;
-				}
-				closeMenus();
-				menu.classList.add('open');
-				openMenu = menu;
-			}
-
-			menus.forEach(menu => {
-				const trigger = menu.querySelector('.gem-menubar-item');
-
-				trigger.addEventListener('click', function(event) {
-					event.stopPropagation();
-					if (openMenu === menu) {
-						closeMenus();
-						return;
-					}
-					openMenuPanel(menu);
-				});
-
-				menu.addEventListener('mouseenter', function() {
-					if (!openMenu) {
-						return;
-					}
-					openMenuPanel(menu);
-				});
-			});
-
-			document.querySelectorAll('.gem-menu-entry').forEach(entry => {
-				entry.addEventListener('click', function(event) {
-					event.stopPropagation();
-					if (this.classList.contains('disabled')) {
-						return;
-					}
-					closeMenus();
-				});
-			});
-
-			document.addEventListener('click', function(event) {
-				if (!menuLeft.contains(event.target)) {
-					closeMenus();
-				}
-			});
-
-			document.addEventListener('keydown', function(event) {
-				if (event.key === 'Escape') {
-					closeMenus();
-				}
-			});
-
-			// Simple Canvas Init (keeps it visually white instead of transparent)
-			const canvas = document.getElementById('paint');
-			const ctx = canvas.getContext('2d');
-			ctx.fillStyle = '#ffffff';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-			// Canvas viewport scrolling (custom GEM-style scrollbars)
-			const canvasContainer = document.querySelector('.gem-canvas-container');
-			const verticalScrollbar = document.querySelector('.gem-scrollbar.vertical');
-			const horizontalScrollbar = document.querySelector('.gem-scrollbar.horizontal');
-			const vTrack = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-track') : null;
-			const hTrack = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-track') : null;
-			const vThumb = vTrack ? vTrack.querySelector('.gem-sb-thumb') : null;
-			const hThumb = hTrack ? hTrack.querySelector('.gem-sb-thumb') : null;
-			const vBtnUp = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-btn.up') : null;
-			const vBtnDown = verticalScrollbar ? verticalScrollbar.querySelector('.gem-sb-btn.down') : null;
-			const hBtnLeft = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-btn.left') : null;
-			const hBtnRight = horizontalScrollbar ? horizontalScrollbar.querySelector('.gem-sb-btn.right') : null;
-
-			const MIN_THUMB_SIZE = 16;
-			const LINE_SCROLL = 16;
-			let scrollX = 0;
-			let scrollY = 0;
-			let maxScrollX = 0;
-			let maxScrollY = 0;
-			let hThumbSize = 0;
-			let vThumbSize = 0;
-
-			function clamp(value, min, max) {
-				return Math.min(max, Math.max(min, value));
-			}
-
-			function updateCanvasOffset() {
-				canvas.style.left = (-scrollX) + 'px';
-				canvas.style.top = (-scrollY) + 'px';
-			}
-
-			function updateScrollbarThumbs() {
-				if (!hTrack || !vTrack || !hThumb || !vThumb) {
-					return;
-				}
-
-				const viewportW = canvasContainer.clientWidth;
-				const viewportH = canvasContainer.clientHeight;
-				const contentW = canvas.width;
-				const contentH = canvas.height;
-				const hTrackSize = hTrack.clientWidth;
-				const vTrackSize = vTrack.clientHeight;
-
-				hThumbSize = (maxScrollX === 0) ? hTrackSize : Math.max(MIN_THUMB_SIZE, Math.round((viewportW / contentW) * hTrackSize));
-				vThumbSize = (maxScrollY === 0) ? vTrackSize : Math.max(MIN_THUMB_SIZE, Math.round((viewportH / contentH) * vTrackSize));
-				hThumbSize = Math.min(hThumbSize, hTrackSize);
-				vThumbSize = Math.min(vThumbSize, vTrackSize);
-
-				const hRange = Math.max(0, hTrackSize - hThumbSize);
-				const vRange = Math.max(0, vTrackSize - vThumbSize);
-				const hPos = (maxScrollX === 0) ? 0 : Math.round((scrollX / maxScrollX) * hRange);
-				const vPos = (maxScrollY === 0) ? 0 : Math.round((scrollY / maxScrollY) * vRange);
-
-				hThumb.style.width = hThumbSize + 'px';
-				hThumb.style.left = hPos + 'px';
-				vThumb.style.height = vThumbSize + 'px';
-				vThumb.style.top = vPos + 'px';
-			}
-
-			function recalcScrollBounds() {
-				if (!canvasContainer) {
-					return;
-				}
-				maxScrollX = Math.max(0, canvas.width - canvasContainer.clientWidth);
-				maxScrollY = Math.max(0, canvas.height - canvasContainer.clientHeight);
-				scrollX = clamp(scrollX, 0, maxScrollX);
-				scrollY = clamp(scrollY, 0, maxScrollY);
-				updateCanvasOffset();
-				updateScrollbarThumbs();
-			}
-
-			function scrollToPosition(nextX, nextY) {
-				const clampedX = clamp(Math.round(nextX), 0, maxScrollX);
-				const clampedY = clamp(Math.round(nextY), 0, maxScrollY);
-				if (clampedX === scrollX && clampedY === scrollY) {
-					return;
-				}
-				scrollX = clampedX;
-				scrollY = clampedY;
-				updateCanvasOffset();
-				updateScrollbarThumbs();
-			}
-
-			function scrollBy(deltaX, deltaY) {
-				scrollToPosition(scrollX + deltaX, scrollY + deltaY);
-			}
-
-			function setupScrollbarEvents() {
-				if (!hTrack || !vTrack || !hThumb || !vThumb) {
-					return;
-				}
-
-				if (vBtnUp) vBtnUp.addEventListener('click', function() { scrollBy(0, -LINE_SCROLL); });
-				if (vBtnDown) vBtnDown.addEventListener('click', function() { scrollBy(0, LINE_SCROLL); });
-				if (hBtnLeft) hBtnLeft.addEventListener('click', function() { scrollBy(-LINE_SCROLL, 0); });
-				if (hBtnRight) hBtnRight.addEventListener('click', function() { scrollBy(LINE_SCROLL, 0); });
-
-				vTrack.addEventListener('mousedown', function(event) {
-					if (event.target === vThumb) return;
-					const rect = vTrack.getBoundingClientRect();
-					const clickY = event.clientY - rect.top;
-					const thumbTop = vThumb.offsetTop;
-					const pageStep = Math.max(1, canvasContainer.clientHeight - LINE_SCROLL);
-					scrollBy(0, clickY < thumbTop ? -pageStep : pageStep);
-				});
-
-				hTrack.addEventListener('mousedown', function(event) {
-					if (event.target === hThumb) return;
-					const rect = hTrack.getBoundingClientRect();
-					const clickX = event.clientX - rect.left;
-					const thumbLeft = hThumb.offsetLeft;
-					const pageStep = Math.max(1, canvasContainer.clientWidth - LINE_SCROLL);
-					scrollBy(clickX < thumbLeft ? -pageStep : pageStep, 0);
-				});
-
-				function beginThumbDrag(axis, event) {
-					event.preventDefault();
-					const startClient = (axis === 'x') ? event.clientX : event.clientY;
-					const startScroll = (axis === 'x') ? scrollX : scrollY;
-					const trackSize = (axis === 'x') ? hTrack.clientWidth : vTrack.clientHeight;
-					const thumbSize = (axis === 'x') ? hThumbSize : vThumbSize;
-					const scrollMax = (axis === 'x') ? maxScrollX : maxScrollY;
-					const dragRange = Math.max(1, trackSize - thumbSize);
-
-					function onMove(moveEvent) {
-						const currentClient = (axis === 'x') ? moveEvent.clientX : moveEvent.clientY;
-						const delta = currentClient - startClient;
-						if (scrollMax === 0) {
-							return;
-						}
-						const nextScroll = startScroll + (delta / dragRange) * scrollMax;
-						if (axis === 'x') {
-							scrollToPosition(nextScroll, scrollY);
-						} else {
-							scrollToPosition(scrollX, nextScroll);
-						}
-					}
-
-					function onUp() {
-						document.removeEventListener('mousemove', onMove);
-						document.removeEventListener('mouseup', onUp);
-					}
-
-					document.addEventListener('mousemove', onMove);
-					document.addEventListener('mouseup', onUp);
-				}
-
-				hThumb.addEventListener('mousedown', function(event) {
-					beginThumbDrag('x', event);
-				});
-
-				vThumb.addEventListener('mousedown', function(event) {
-					beginThumbDrag('y', event);
-				});
-
-				canvasContainer.addEventListener('wheel', function(event) {
-					if (maxScrollX === 0 && maxScrollY === 0) {
-						return;
-					}
-					event.preventDefault();
-					scrollBy(event.deltaX, event.deltaY);
-				}, { passive: false });
-			}
-
-			setupScrollbarEvents();
-			window.addEventListener('resize', recalcScrollBounds);
-			recalcScrollBounds();
-
-			// File loading
-			const fileInput = document.getElementById('file-open');
-			const openMenuItem = document.getElementById('menu-file-open');
-
-			if (fileInput && openMenuItem) {
-				openMenuItem.addEventListener('click', function() {
-					fileInput.click();
-				});
-
-				fileInput.addEventListener('change', function() {
-					const file = this.files[0];
-					if (!file) return;
-					const reader = new FileReader();
-					reader.onload = function(e) {
-						const img = new Image();
-						img.onload = function() {
-							canvas.width = img.naturalWidth;
-							canvas.height = img.naturalHeight;
-							ctx.drawImage(img, 0, 0);
-							document.querySelector('.gem-titlebar-name').textContent =
-								file.name.toUpperCase();
-							scrollX = 0;
-							scrollY = 0;
-							recalcScrollBounds();
-						};
-						img.src = e.target.result;
-					};
-					reader.readAsDataURL(file);
-					this.value = '';
-				});
-			}
-
-		})();
-	</script>
+	<script type="module" src="./js/main.js"></script>
 </body>
 </html>

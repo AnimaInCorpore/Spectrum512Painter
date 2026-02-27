@@ -8,6 +8,22 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
 - Use **no external dependencies** (no third-party libraries, frameworks, or CDNs).
 - Keep the implementation self-contained in this repository.
 
+## Code Organization Rules
+- Split behavior by responsibility into ES modules (for example: UI, canvas/viewport, I/O, tools).
+- **Do not keep large functions monolithic**. If a function grows beyond a small, single-purpose unit, split it into helper functions and/or separate modules.
+- Prefer one module per feature area, and one function per clear responsibility.
+- Keep wiring/composition in a small entry module (currently `js/main.js`), while feature logic lives in dedicated modules.
+- Keep tool identifiers stable via `data-tool` attributes in the UI and matching keys in the tool registry.
+
+### Current JS Module Layout
+- `js/ui/*`: GEM menu behavior, tool button selection, pattern palette UI.
+- `js/canvas/*`: canvas document state and custom GEM viewport scrollbar behavior.
+- `js/io/*`: file loading, saving, and export handlers.
+- `js/tools/*`: tool state, tool controller, tool registry, helpers, and per-tool implementations.
+- `js/imaging/*`: image processing and color operations (for example quantization, palette mapping, dithering, conversions).
+- `js/formats/*`: file format encode/decode modules (for example Spectrum512 readers/writers and related bitmap import/export codecs).
+- `js/config/*`: shared static configuration (for example pattern class lists).
+
 ## UI/UX Direction
 - The website shall mimic an **ancient Atari GEM-like GUI**.
 - Use **proper GEM-style English text** for all visible GUI labels, menus, and captions.
