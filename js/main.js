@@ -1,4 +1,5 @@
 import { PATTERN_CLASSES } from './config/patterns.js';
+import { GEM_256_COLORS } from './config/colors.js';
 import { createCanvasDocument } from './canvas/document.js';
 import { createViewportScroller } from './canvas/viewport.js';
 import { setupFileLoading } from './io/loading.js';
@@ -7,6 +8,7 @@ import { createToolController } from './tools/controller.js';
 import { createToolRegistry } from './tools/registry.js';
 import { createToolState } from './tools/state.js';
 import { initGemMenus } from './ui/menus.js';
+import { initColorPalette } from './ui/colors.js';
 import { initPatternPalette } from './ui/patterns.js';
 import { initToolSelection } from './ui/tools.js';
 import {
@@ -21,6 +23,9 @@ import {
 } from './imaging/spectrum512.js';
 
 const patternsGrid = document.getElementById('patterns-grid');
+const colorGrid = document.getElementById('color-grid');
+const foregroundSwatch = document.getElementById('color-foreground');
+const backgroundSwatch = document.getElementById('color-background');
 const menuRoot = document.querySelector('.menu-left');
 const canvas = document.getElementById('paint');
 const canvasContainer = document.querySelector('.gem-canvas-container');
@@ -293,6 +298,33 @@ function clearSpectrumSession() {
 	spectrumSession = null;
 }
 
+function createDefaultBlankSource() {
+	const width = SPECTRUM_CANVAS_WIDTH;
+	const height = SPECTRUM_CANVAS_HEIGHT;
+	const pixels = new Uint8ClampedArray(width * height * 4);
+	for (let i = 0; i < pixels.length; i += 4) {
+		pixels[i] = 255;
+		pixels[i + 1] = 255;
+		pixels[i + 2] = 255;
+		pixels[i + 3] = 255;
+	}
+	return {
+		type: 'bitmap',
+		bitmap: { width, height, pixels },
+		fileName: 'UNTITLED'
+	};
+}
+
+function initializeDefaultDocument() {
+	if (lastLoadedSource) {
+		return;
+	}
+	lastLoadedSource = createDefaultBlankSource();
+	sourceRevision += 1;
+	clearSpectrumSession();
+	renderLoadedSource();
+}
+
 if (spectrumToggleEntry) {
 	spectrumToggleEntry.addEventListener('click', () => {
 		spectrum512Enabled = !spectrum512Enabled;
@@ -352,6 +384,14 @@ window.addEventListener('resize', () => {
 const toolState = createToolState('pencil');
 const toolRegistry = createToolRegistry();
 
+initColorPalette({
+	colorGrid,
+	foregroundSwatch,
+	backgroundSwatch,
+	colors: GEM_256_COLORS,
+	toolState
+});
+
 initToolSelection(document, {
 	onToolChange: toolId => {
 		toolState.setActiveTool(toolId);
@@ -410,3 +450,5 @@ setupFileSaving({
 	exportMenuItem: document.getElementById('menu-file-export'),
 	getBaseFileName: canvasDocument.getDownloadBaseName
 });
+
+initializeDefaultDocument();

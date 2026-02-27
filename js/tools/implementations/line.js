@@ -1,18 +1,19 @@
 import { constrainTo45Deg } from '../helpers/geometry.js';
 import { drawLine, writePixel } from '../helpers/pixels.js';
 
-function drawBlackLine(api, from, to) {
+function drawLineWithColor(api, from, to, color) {
 	drawLine(api.canvas, api.context, from.x, from.y, to.x, to.y, (x, y) => {
-		writePixel(api.context, x, y, 0, 0, 0, 255);
+		writePixel(api.context, x, y, color[0], color[1], color[2], 255);
 	});
 }
 
 export function createLineTool() {
 	return {
-		onPointerDown({ point }) {
+		onPointerDown({ point, api }) {
 			return {
 				start: { ...point },
-				last: { ...point }
+				last: { ...point },
+				color: api.foregroundColor
 			};
 		},
 		onPointerMove({ point, session, event }) {
@@ -26,7 +27,7 @@ export function createLineTool() {
 				return;
 			}
 			const endPoint = event.shiftKey ? constrainTo45Deg(session.start, point) : point;
-			drawBlackLine(api, session.start, endPoint);
+			drawLineWithColor(api, session.start, endPoint, session.color);
 		}
 	};
 }

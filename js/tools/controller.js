@@ -23,6 +23,12 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		get context() {
 			return resolveContext();
 		},
+		get foregroundColor() {
+			return toolState.getForegroundColor();
+		},
+		get backgroundColor() {
+			return toolState.getBackgroundColor();
+		},
 		getCanvas: null,
 		getContext: null,
 		getVisibleRect

@@ -262,6 +262,29 @@
 		.gem-color-block-top { flex: 1; background: var(--white); border-bottom: 1px solid var(--black); }
 		.gem-color-block-bottom { flex: 1; background: var(--black); }
 
+		.gem-color-palette {
+			height: 112px;
+			border: 1px solid var(--black);
+			background: var(--white);
+			display: grid;
+			grid-template-columns: repeat(16, 1fr);
+			grid-auto-rows: 7px;
+			overflow: hidden;
+		}
+
+		.gem-color-tile {
+			border: 0;
+			padding: 0;
+			margin: 0;
+			cursor: pointer;
+			min-width: 0;
+		}
+
+		.gem-color-tile.active {
+			outline: 1px solid var(--black);
+			outline-offset: -1px;
+		}
+
 		/* Slider */
 		.gem-slider-container {
 			background: var(--white);
@@ -650,9 +673,10 @@
 					</div>
 
 					<div class="gem-color-block">
-						<div class="gem-color-block-top"></div>
-						<div class="gem-color-block-bottom"></div>
+						<div class="gem-color-block-top" id="color-foreground"></div>
+						<div class="gem-color-block-bottom" id="color-background"></div>
 					</div>
+					<div class="gem-color-palette" id="color-grid"></div>
 
 					<div class="gem-slider-container">
 						<div class="gem-slider-track-wrap">
@@ -667,7 +691,7 @@
 
 				<div class="gem-canvas-area">
 					<div class="gem-canvas-container">
-						<canvas id="paint" width="600" height="400"></canvas>
+						<canvas id="paint" width="320" height="200"></canvas>
 					</div>
 					<div class="gem-scrollbar vertical">
 						<div class="gem-sb-btn up"></div>

@@ -1,11 +1,8 @@
 import { constrainToLine } from '../helpers/geometry.js';
-import { drawLine, inBounds, readPixel, writePixel } from '../helpers/pixels.js';
+import { drawLine, inBounds, writePixel } from '../helpers/pixels.js';
 
-function invertPixel(ctx, x, y) {
-	const current = readPixel(ctx, x, y);
-	const isBlack = current[0] < 128 && current[1] < 128 && current[2] < 128;
-	const value = isBlack ? 255 : 0;
-	writePixel(ctx, x, y, value, value, value, 255);
+function paintPixel(ctx, color, x, y) {
+	writePixel(ctx, x, y, color[0], color[1], color[2], 255);
 }
 
 export function createPencilTool() {
@@ -13,10 +10,11 @@ export function createPencilTool() {
 		onPointerDown({ api, point }) {
 			const session = {
 				start: { ...point },
-				last: { ...point }
+				last: { ...point },
+				color: api.foregroundColor
 			};
 			if (inBounds(api.canvas, point.x, point.y)) {
-				invertPixel(api.context, point.x, point.y);
+				paintPixel(api.context, session.color, point.x, point.y);
 			}
 			return session;
 		},
@@ -26,7 +24,7 @@ export function createPencilTool() {
 			}
 			const next = event.shiftKey ? constrainToLine(session.start, point) : point;
 			drawLine(api.canvas, api.context, session.last.x, session.last.y, next.x, next.y, (x, y) => {
-				invertPixel(api.context, x, y);
+				paintPixel(api.context, session.color, x, y);
 			});
 			session.last = { ...next };
 		},
