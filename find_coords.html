@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="c"></canvas>
+<script>
+const img = new Image();
+img.onload = () => {
+  const c = document.getElementById('c');
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  c.onmousemove = (e) => {
+    console.log(e.offsetX, e.offsetY);
+  };
+};
+img.src = 'GEM/gem-paint.png';
+</script>
+</body>
+</html>
