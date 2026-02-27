@@ -34,7 +34,7 @@ export const FLOYD_STEINBERG_DITHER_PRESETS = {
 const DEFAULT_BITS_PER_COLOR = SPECTRUM512_TARGETS.ste4096.bitsPerColor;
 const DEFAULT_DITHER_PATTERN = FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg.pattern;
 
-function getColorSlotIndex(x, colorIndex) {
+export function getSpectrum512ColorSlotIndex(x, colorIndex) {
 	let temp = 10 * colorIndex;
 
 	if (colorIndex & 1) {
@@ -172,7 +172,7 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 		let colorIndex = 0;
 
 		for (; colorIndex < 16; colorIndex += 1) {
-			const spectrumColor = colorSlots[getColorSlotIndex(x, colorIndex)];
+			const spectrumColor = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
 			if (spectrumColor.red === red && spectrumColor.green === green && spectrumColor.blue === blue) {
 				spectrumColor.count += 1;
 				break;
@@ -279,7 +279,7 @@ function remapLine(lineData, targetData, width, y, colorSlots) {
 		let remapped = null;
 
 		for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
-			const slot = colorSlots[getColorSlotIndex(x, colorIndex)];
+			const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
 			const distance = OklchDistance(pixelOklch, slot.oklch);
 			if (distance < closestDistance) {
 				closestDistance = distance;
@@ -296,6 +296,51 @@ function remapLine(lineData, targetData, width, y, colorSlots) {
 		targetData[pixelIndex + 2] = remapped.blue;
 		targetData[pixelIndex + 3] = 255;
 	}
+}
+
+export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} }) {
+	if (!sourceCanvas) {
+		return [];
+	}
+	const width = sourceCanvas.width;
+	const height = sourceCanvas.height;
+	if (width < 1 || height < 1) {
+		return [];
+	}
+
+	const bitsPerColor = Number.isFinite(options.bitsPerColor)
+		? options.bitsPerColor
+		: DEFAULT_BITS_PER_COLOR;
+	const ditherPattern = options.ditherPattern || DEFAULT_DITHER_PATTERN;
+	const shadesPerColor = 1 << bitsPerColor;
+	const shadesScale = (shadesPerColor - 1) / 255;
+	const inverseShadesScale = 1 / shadesScale;
+
+	const sourceContext = sourceCanvas.getContext('2d');
+	const sourceImage = sourceContext.getImageData(0, 0, width, height);
+	const sourceData = sourceImage.data;
+	const lines = new Array(height);
+
+	for (let y = 0; y < height; y += 1) {
+		const lineData = buildWorkingLine(
+			sourceData,
+			width,
+			y,
+			shadesScale,
+			inverseShadesScale,
+			ditherPattern
+		);
+		const colorSlots = createColorSlots();
+		fillLineColorSlots(lineData, width, colorSlots);
+		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
+		lines[y] = colorSlots.map(slot => ({
+			red: slot.red,
+			green: slot.green,
+			blue: slot.blue
+		}));
+	}
+
+	return lines;
 }
 
 function cloneCanvas(sourceCanvas) {

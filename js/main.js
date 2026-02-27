@@ -62,6 +62,11 @@ let sourceRevision = 0;
 let spectrumSession = null;
 let viewportScroller = null;
 const DITHER_MENU_ENABLED = false;
+const BITS_TO_SPECTRUM_TARGET = {
+	3: 'st512',
+	4: 'ste4096',
+	5: 'ste32768'
+};
 
 const canvasDocument = createCanvasDocument({
 	canvas,
@@ -114,7 +119,8 @@ function computeSpectrumScale() {
 }
 
 function applyDisplayScale() {
-	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH && canvas.height === SPECTRUM_CANVAS_HEIGHT;
+	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH
+		&& (canvas.height === SPECTRUM_CANVAS_HEIGHT || canvas.height === SPECTRUM_CANVAS_HEIGHT - 1);
 	if (!spectrum512Enabled || !isSpectrumCanvas) {
 		canvas.style.width = '';
 		canvas.style.height = '';
@@ -134,6 +140,22 @@ function toCanvasFromBitmap(bitmap) {
 	const tempContext = tempCanvas.getContext('2d');
 	tempContext.putImageData(new ImageData(new Uint8ClampedArray(bitmap.pixels), bitmap.width, bitmap.height), 0, 0);
 	return tempCanvas;
+}
+
+function cloneCanvas(sourceCanvas) {
+	const clonedCanvas = document.createElement('canvas');
+	clonedCanvas.width = sourceCanvas.width;
+	clonedCanvas.height = sourceCanvas.height;
+	clonedCanvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
+	return clonedCanvas;
+}
+
+function shouldBypassSpectrumResize() {
+	return Boolean(
+		lastLoadedSource
+		&& lastLoadedSource.type === 'bitmap'
+		&& lastLoadedSource.sourceFormat === 'spu'
+	);
 }
 
 function getBaseSourceForSpectrum() {
@@ -209,7 +231,7 @@ function createSpectrumSession() {
 		return null;
 	}
 
-	const baseCanvas = createSpectrumCanvas(source);
+	const baseCanvas = shouldBypassSpectrumResize() ? cloneCanvas(source) : createSpectrumCanvas(source);
 	const baseContext = baseCanvas.getContext('2d');
 	const session = {
 		revision: sourceRevision,
@@ -427,7 +449,14 @@ setupFileLoading({
 		clearSpectrumSession();
 		renderLoadedSource();
 	},
-	onBitmapLoaded: ({ width, height, pixels, fileName }) => {
+	onBitmapLoaded: ({ width, height, pixels, fileName, sourceFormat, bitsPerColor }) => {
+		if (sourceFormat === 'spu') {
+			const preferredTarget = BITS_TO_SPECTRUM_TARGET[bitsPerColor];
+			if (preferredTarget) {
+				spectrumTarget = preferredTarget;
+				updateSpectrumMenuEntries();
+			}
+		}
 		lastLoadedSource = {
 			type: 'bitmap',
 			bitmap: {
@@ -435,7 +464,8 @@ setupFileLoading({
 				height,
 				pixels: new Uint8ClampedArray(pixels)
 			},
-			fileName
+			fileName,
+			sourceFormat
 		};
 		sourceRevision += 1;
 		clearSpectrumSession();
@@ -448,7 +478,18 @@ setupFileSaving({
 	saveMenuItem: document.getElementById('menu-file-save'),
 	saveAsMenuItem: document.getElementById('menu-file-save-as'),
 	exportMenuItem: document.getElementById('menu-file-export'),
-	getBaseFileName: canvasDocument.getDownloadBaseName
+	getBaseFileName: canvasDocument.getDownloadBaseName,
+	getSpuSourceCanvas: () => {
+		if (spectrumSession) {
+			return spectrumSession.baseCanvas;
+		}
+		if (spectrum512Enabled) {
+			const session = ensureSpectrumSession();
+			return session ? session.baseCanvas : canvas;
+		}
+		return canvas;
+	},
+	getSpuOptions: () => getSpectrumConversionOptions()
 });
 
 initializeDefaultDocument();
