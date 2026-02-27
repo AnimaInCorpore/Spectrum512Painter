@@ -10,12 +10,16 @@ import { initGemMenus } from './ui/menus.js';
 import { initPatternPalette } from './ui/patterns.js';
 import { initToolSelection } from './ui/tools.js';
 import {
-	createSpectrumCanvas,
 	SPECTRUM_CANVAS_WIDTH,
 	SPECTRUM_CANVAS_HEIGHT
 } from './imaging/spectrum.js';
+import {
+	createSpectrum512ConvertedCanvas,
+	SPECTRUM512_TARGETS,
+	FLOYD_STEINBERG_DITHER_PRESETS
+} from './imaging/spectrum512.js';
 
-function createSpectrumBitmapBuffer({ width, height, pixels }) {
+function createSpectrumBitmapBuffer({ width, height, pixels }, conversionOptions) {
 	const tempCanvas = document.createElement('canvas');
 	tempCanvas.width = width;
 	tempCanvas.height = height;
@@ -23,7 +27,7 @@ function createSpectrumBitmapBuffer({ width, height, pixels }) {
 	const tempContext = tempCanvas.getContext('2d');
 	tempContext.putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
 
-	const spectrumCanvas = createSpectrumCanvas(tempCanvas);
+	const spectrumCanvas = createSpectrum512ConvertedCanvas(tempCanvas, conversionOptions);
 	const spectrumContext = spectrumCanvas.getContext('2d');
 	const spectrumData = spectrumContext.getImageData(0, 0, spectrumCanvas.width, spectrumCanvas.height);
 
@@ -40,20 +44,69 @@ const canvas = document.getElementById('paint');
 const canvasContainer = document.querySelector('.gem-canvas-container');
 const titleElement = document.querySelector('.gem-titlebar-name');
 const spectrumToggleEntry = document.getElementById('menu-color-spectrum512');
+const target512Entry = document.getElementById('menu-color-target-512');
+const target4096Entry = document.getElementById('menu-color-target-4096');
+const target32768Entry = document.getElementById('menu-color-target-32768');
+const ditherFsEntry = document.getElementById('menu-color-dither-fs');
+const ditherFs85Entry = document.getElementById('menu-color-dither-fs-85');
+const ditherFs75Entry = document.getElementById('menu-color-dither-fs-75');
+const ditherFs50Entry = document.getElementById('menu-color-dither-fs-50');
+const ditherFalseFsEntry = document.getElementById('menu-color-dither-false-fs');
 let spectrum512Enabled = false;
+let spectrumTarget = 'ste4096';
+let spectrumDither = 'floydSteinberg';
 let lastLoadedSource = null;
 
-const updateSpectrumEntry = () => {
+const targetEntryMap = {
+	st512: target512Entry,
+	ste4096: target4096Entry,
+	ste32768: target32768Entry
+};
+
+const ditherEntryMap = {
+	floydSteinberg: ditherFsEntry,
+	floydSteinberg85: ditherFs85Entry,
+	floydSteinberg75: ditherFs75Entry,
+	floydSteinberg50: ditherFs50Entry,
+	falseFloydSteinberg: ditherFalseFsEntry
+};
+
+const setMenuChoiceText = (entry, label, selected) => {
+	if (!entry) {
+		return;
+	}
+	entry.textContent = `${selected ? '✓' : ' '} ${label}`;
+};
+
+const getSpectrumConversionOptions = () => {
+	const target = SPECTRUM512_TARGETS[spectrumTarget] || SPECTRUM512_TARGETS.ste4096;
+	const dither = FLOYD_STEINBERG_DITHER_PRESETS[spectrumDither] || FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg;
+
+	return {
+		bitsPerColor: target.bitsPerColor,
+		ditherPattern: dither.pattern
+	};
+};
+
+const updateSpectrumMenuEntries = () => {
 	if (!spectrumToggleEntry) {
 		return;
 	}
 	spectrumToggleEntry.textContent = `Spectrum 512 ${spectrum512Enabled ? 'On' : 'Off'}`;
 	spectrumToggleEntry.setAttribute('aria-pressed', String(spectrum512Enabled));
+
+	Object.entries(SPECTRUM512_TARGETS).forEach(([key, target]) => {
+		setMenuChoiceText(targetEntryMap[key], target.label, key === spectrumTarget);
+	});
+
+	Object.entries(FLOYD_STEINBERG_DITHER_PRESETS).forEach(([key, preset]) => {
+		setMenuChoiceText(ditherEntryMap[key], preset.label, key === spectrumDither);
+	});
 };
 
 const toggleSpectrum512 = () => {
 	spectrum512Enabled = !spectrum512Enabled;
-	updateSpectrumEntry();
+	updateSpectrumMenuEntries();
 	renderLoadedSource();
 };
 
@@ -62,7 +115,34 @@ if (spectrumToggleEntry) {
 		toggleSpectrum512();
 	});
 }
-updateSpectrumEntry();
+
+Object.entries(targetEntryMap).forEach(([key, entry]) => {
+	if (!entry) {
+		return;
+	}
+	entry.addEventListener('click', () => {
+		spectrumTarget = key;
+		updateSpectrumMenuEntries();
+		if (spectrum512Enabled && lastLoadedSource) {
+			renderLoadedSource();
+		}
+	});
+});
+
+Object.entries(ditherEntryMap).forEach(([key, entry]) => {
+	if (!entry) {
+		return;
+	}
+	entry.addEventListener('click', () => {
+		spectrumDither = key;
+		updateSpectrumMenuEntries();
+		if (spectrum512Enabled && lastLoadedSource) {
+			renderLoadedSource();
+		}
+	});
+});
+
+updateSpectrumMenuEntries();
 
 const canvasDocument = createCanvasDocument({
 	canvas,
@@ -99,7 +179,7 @@ const renderLoadedSource = () => {
 
 	if (lastLoadedSource.type === 'image') {
 		const imageToRender = spectrum512Enabled
-			? createSpectrumCanvas(lastLoadedSource.image)
+			? createSpectrum512ConvertedCanvas(lastLoadedSource.image, getSpectrumConversionOptions())
 			: lastLoadedSource.image;
 		canvasDocument.setImage({
 			image: imageToRender,
@@ -111,7 +191,7 @@ const renderLoadedSource = () => {
 	}
 
 	const bitmapToRender = spectrum512Enabled
-		? createSpectrumBitmapBuffer(lastLoadedSource.bitmap)
+		? createSpectrumBitmapBuffer(lastLoadedSource.bitmap, getSpectrumConversionOptions())
 		: lastLoadedSource.bitmap;
 	canvasDocument.setPixelBuffer({
 		...bitmapToRender,
