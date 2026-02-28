@@ -287,6 +287,16 @@ export function LinearToSRGB(c) {
 
 export function rgbToOklch(rgb)
 {
+	var oklab = rgbToOklab(rgb);
+	var C = Math.sqrt(oklab[1] * oklab[1] + oklab[2] * oklab[2]);
+	var h = Math.atan2(oklab[2], oklab[1]);
+
+	return [ oklab[0], C, h ];
+}
+
+
+export function rgbToOklab(rgb)
+{
 	var r = rgb[0] / 255;
 	var g = rgb[1] / 255;
 	var b = rgb[2] / 255;
@@ -307,10 +317,7 @@ export function rgbToOklch(rgb)
 	var a = 1.9779984951 * lRoot - 2.4285922050 * mRoot + 0.4505937099 * sRoot;
 	var bb = 0.0259040371 * lRoot + 0.7827717662 * mRoot - 0.8086757660 * sRoot;
 
-	var C = Math.sqrt(a * a + bb * bb);
-	var h = Math.atan2(bb, a);
-
-	return [ L, C, h ];
+	return [ L, a, bb ];
 }
 
 
@@ -341,4 +348,14 @@ export function OklchDistance(color1, color2)
 	var hueTerm = 2 * Math.sqrt(C1 * C2) * Math.sin(deltaH / 2);
 	
 	return deltaL * deltaL * lWeight + deltaC * deltaC * cWeight + hueTerm * hueTerm;
+}
+
+
+export function OklabDistance(color1, color2)
+{
+	var deltaL = color1[0] - color2[0];
+	var deltaA = color1[1] - color2[1];
+	var deltaB = color1[2] - color2[2];
+
+	return deltaL * deltaL + deltaA * deltaA + deltaB * deltaB;
 }

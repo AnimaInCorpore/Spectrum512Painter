@@ -1,5 +1,5 @@
 import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/spectrum512.js';
-import { OklchDistance, rgbToOklch } from '../vendor/jscolorquantizer/quantizers/core.js';
+import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
 import { createSpectrumCanvas } from './spectrum.js';
 
 export const SPECTRUM512_TARGETS = {
@@ -66,6 +66,10 @@ function quantizeChannel(value, shadesScale, inverseShadesScale) {
 	return Math.round(Math.round(value * shadesScale) * inverseShadesScale);
 }
 
+function getOklabChroma(oklab) {
+	return Math.sqrt(oklab[1] * oklab[1] + oklab[2] * oklab[2]);
+}
+
 function createColorSlots() {
 	const slots = [];
 	for (let i = 0; i < 48; i += 1) {
@@ -77,7 +81,7 @@ function createColorSlots() {
 			red,
 			green,
 			blue,
-			oklch: rgbToOklch([red, green, blue]),
+			oklab: rgbToOklab([red, green, blue]),
 			count,
 			slotIndex: i
 		});
@@ -93,7 +97,7 @@ function mergeColors(colorA, colorB) {
 	colorA.red = Math.round((colorA.red * weightA + colorB.red * weightB) / total);
 	colorA.green = Math.round((colorA.green * weightA + colorB.green * weightB) / total);
 	colorA.blue = Math.round((colorA.blue * weightA + colorB.blue * weightB) / total);
-	colorA.oklch = rgbToOklch([colorA.red, colorA.green, colorA.blue]);
+	colorA.oklab = rgbToOklab([colorA.red, colorA.green, colorA.blue]);
 	colorA.count = total;
 }
 
@@ -166,9 +170,9 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 		const red = clampColor(lineData[pixelIndex]);
 		const green = clampColor(lineData[pixelIndex + 1]);
 		const blue = clampColor(lineData[pixelIndex + 2]);
-		const pixelOklch = rgbToOklch([red, green, blue]);
+		const pixelOklab = rgbToOklab([red, green, blue]);
 
-		const colors = [{ red, green, blue, oklch: pixelOklch, count: 1 }];
+		const colors = [{ red, green, blue, oklab: pixelOklab, count: 1 }];
 		let colorIndex = 0;
 
 		for (; colorIndex < 16; colorIndex += 1) {
@@ -181,7 +185,7 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 				spectrumColor.red = red;
 				spectrumColor.green = green;
 				spectrumColor.blue = blue;
-				spectrumColor.oklch = pixelOklch;
+				spectrumColor.oklab = pixelOklab;
 				spectrumColor.count = 1;
 				break;
 			}
@@ -204,19 +208,9 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 					continue;
 				}
 
-				let deltaH = Math.abs(colorA.oklch[2] - colorB.oklch[2]);
-				if (deltaH > Math.PI) {
-					deltaH = Math.PI * 2 - deltaH;
-				}
-
-				const minC = Math.min(colorA.oklch[1], colorB.oklch[1]);
-				if (minC > 0.05 && deltaH > Math.PI * (40 / 180)) {
-					continue;
-				}
-
-				const distance = OklchDistance(colorA.oklch, colorB.oklch);
-				const lightnessGap = Math.abs(colorA.oklch[0] - colorB.oklch[0]);
-				const chromaGap = Math.abs(colorA.oklch[1] - colorB.oklch[1]);
+				const distance = OklabDistance(colorA.oklab, colorB.oklab);
+				const lightnessGap = Math.abs(colorA.oklab[0] - colorB.oklab[0]);
+				const chromaGap = Math.abs(getOklabChroma(colorA.oklab) - getOklabChroma(colorB.oklab));
 				const score = distance * (colorA.count + colorB.count) * (1 + lightnessGap) * (1 + chromaGap);
 
 				if (score < bestScore) {
@@ -238,14 +232,14 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 			bestB.red = colors[0].red;
 			bestB.green = colors[0].green;
 			bestB.blue = colors[0].blue;
-			bestB.oklch = colors[0].oklch;
+			bestB.oklab = colors[0].oklab;
 			bestB.count = colors[0].count;
 		} else {
 			mergeColors(bestB, bestA);
 			bestA.red = colors[0].red;
 			bestA.green = colors[0].green;
 			bestA.blue = colors[0].blue;
-			bestA.oklch = colors[0].oklch;
+			bestA.oklab = colors[0].oklab;
 			bestA.count = colors[0].count;
 		}
 	}
@@ -257,7 +251,7 @@ function quantizeSlots(colorSlots, shadesScale, inverseShadesScale) {
 		slot.red = quantizeChannel(slot.red, shadesScale, inverseShadesScale);
 		slot.green = quantizeChannel(slot.green, shadesScale, inverseShadesScale);
 		slot.blue = quantizeChannel(slot.blue, shadesScale, inverseShadesScale);
-		slot.oklch = rgbToOklch([slot.red, slot.green, slot.blue]);
+		slot.oklab = rgbToOklab([slot.red, slot.green, slot.blue]);
 	}
 }
 
@@ -273,14 +267,14 @@ function remapLine(lineData, targetData, width, y, colorSlots) {
 		const red = clampColor(lineData[lineIndex]);
 		const green = clampColor(lineData[lineIndex + 1]);
 		const blue = clampColor(lineData[lineIndex + 2]);
-		const pixelOklch = rgbToOklch([red, green, blue]);
+		const pixelOklab = rgbToOklab([red, green, blue]);
 
 		let closestDistance = Number.MAX_VALUE;
 		let remapped = null;
 
 		for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
 			const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
-			const distance = OklchDistance(pixelOklch, slot.oklch);
+			const distance = OklabDistance(pixelOklab, slot.oklab);
 			if (distance < closestDistance) {
 				closestDistance = distance;
 				remapped = slot;
