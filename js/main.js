@@ -9,7 +9,9 @@ import { createToolRegistry } from './tools/registry.js';
 import { createToolState } from './tools/state.js';
 import { initGemMenus } from './ui/menus.js';
 import { initColorPalette } from './ui/colors.js';
+import { initLineSizeSlider } from './ui/line-size.js';
 import { initPatternPalette } from './ui/patterns.js';
+import { initShapeModeControl } from './ui/shape-mode.js';
 import { initToolSelection } from './ui/tools.js';
 import {
 	createSpectrumCanvas,
@@ -430,6 +432,8 @@ initColorPalette({
 	colors: GEM_256_COLORS,
 	toolState
 });
+initLineSizeSlider(document, { toolState });
+initShapeModeControl(document, { toolState });
 
 initToolSelection(document, {
 	onToolChange: toolId => {

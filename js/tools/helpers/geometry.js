@@ -40,3 +40,22 @@ export function constrainTo45Deg(start, end) {
 		y: Math.round(start.y + Math.sin(snapped) * length)
 	};
 }
+
+export function constrainToSquare(start, end) {
+	const dx = end.x - start.x;
+	const dy = end.y - start.y;
+	const size = Math.max(Math.abs(dx), Math.abs(dy));
+	const signX = dx < 0 ? -1 : 1;
+	const signY = dy < 0 ? -1 : 1;
+	return {
+		x: start.x + signX * size,
+		y: start.y + signY * size
+	};
+}
+
+export function hasMeaningfulDelta(start, end) {
+	if (!start || !end) {
+		return false;
+	}
+	return start.x !== end.x || start.y !== end.y;
+}

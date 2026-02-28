@@ -55,4 +55,20 @@ export function initColorPalette({ colorGrid, foregroundSwatch, backgroundSwatch
 	renderTiles();
 	updateSwatches();
 	updateActiveTile();
+
+	if (typeof toolState.subscribe === 'function') {
+		toolState.subscribe(change => {
+			if (!change || typeof change.type !== 'string') {
+				return;
+			}
+			if (change.type === 'foregroundColor') {
+				updateSwatches();
+				updateActiveTile();
+				return;
+			}
+			if (change.type === 'backgroundColor') {
+				updateSwatches();
+			}
+		});
+	}
 }

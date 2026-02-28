@@ -29,6 +29,28 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		get backgroundColor() {
 			return toolState.getBackgroundColor();
 		},
+		get lineSize() {
+			return typeof toolState.getLineSize === 'function' ? toolState.getLineSize() : 1;
+		},
+		get shapeFillMode() {
+			return typeof toolState.getShapeFillMode === 'function' ? toolState.getShapeFillMode() : false;
+		},
+		setForegroundColor(color) {
+			toolState.setForegroundColor(color);
+		},
+		setBackgroundColor(color) {
+			toolState.setBackgroundColor(color);
+		},
+		setLineSize(size) {
+			if (typeof toolState.setLineSize === 'function') {
+				toolState.setLineSize(size);
+			}
+		},
+		setShapeFillMode(enabled) {
+			if (typeof toolState.setShapeFillMode === 'function') {
+				toolState.setShapeFillMode(enabled);
+			}
+		},
 		getCanvas: null,
 		getContext: null,
 		getVisibleRect
