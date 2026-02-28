@@ -1,12 +1,16 @@
 import { encodeSpectrumSpu } from '../formats/spectrum-spu.js';
 
-function normalizeExtension(fileName, extension) {
+function replaceExtension(fileName, extension) {
 	const trimmed = (fileName || '').trim();
 	if (!trimmed) {
 		return `UNTITLED.${extension}`;
 	}
-	const ext = `.${extension.toLowerCase()}`;
-	return trimmed.toLowerCase().endsWith(ext) ? trimmed : `${trimmed}.${extension}`;
+
+	const dotIndex = trimmed.lastIndexOf('.');
+	if (dotIndex > 0) {
+		return `${trimmed.slice(0, dotIndex)}.${extension}`;
+	}
+	return `${trimmed}.${extension}`;
 }
 
 function downloadCanvas(canvas, fileName) {
@@ -26,7 +30,13 @@ function downloadBinary(bytes, fileName, mimeType = 'application/octet-stream') 
 	window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function saveSpu({ getBaseFileName, getSpuSourceCanvas, getSpuOptions, promptForName = false }) {
+function saveSpu({
+	getBaseFileName,
+	getSpuFileName,
+	getSpuSourceCanvas,
+	getSpuOptions,
+	promptForName = false
+}) {
 	const sourceCanvas = typeof getSpuSourceCanvas === 'function' ? getSpuSourceCanvas() : null;
 	if (!sourceCanvas) {
 		window.alert('No canvas available for SPU save.');
@@ -40,15 +50,15 @@ function saveSpu({ getBaseFileName, getSpuSourceCanvas, getSpuOptions, promptFor
 		ditherPattern: options.ditherPattern || null
 	});
 
-	const defaultName = normalizeExtension(
-		typeof getBaseFileName === 'function' ? getBaseFileName() : 'UNTITLED',
-		'spu'
-	);
+	const sourceName = typeof getSpuFileName === 'function'
+		? getSpuFileName()
+		: (typeof getBaseFileName === 'function' ? getBaseFileName() : 'UNTITLED');
+	const defaultName = replaceExtension(sourceName, 'spu');
 	const entered = promptForName ? window.prompt('Save SPU as:', defaultName) : defaultName;
 	if (!entered) {
 		return;
 	}
-	const fileName = normalizeExtension(entered, 'spu');
+	const fileName = replaceExtension(entered, 'spu');
 	downloadBinary(bytes, fileName);
 }
 
@@ -58,6 +68,7 @@ export function setupFileSaving({
 	saveAsMenuItem,
 	exportMenuItem,
 	getBaseFileName,
+	getSpuFileName,
 	getSpuSourceCanvas,
 	getSpuOptions
 }) {
@@ -70,6 +81,7 @@ export function setupFileSaving({
 		saveMenuItem.addEventListener('click', () => {
 			saveSpu({
 				getBaseFileName,
+				getSpuFileName,
 				getSpuSourceCanvas,
 				getSpuOptions
 			});
@@ -80,6 +92,7 @@ export function setupFileSaving({
 		saveAsMenuItem.addEventListener('click', () => {
 			saveSpu({
 				getBaseFileName,
+				getSpuFileName,
 				getSpuSourceCanvas,
 				getSpuOptions,
 				promptForName: true

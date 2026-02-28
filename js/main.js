@@ -500,6 +500,12 @@ setupFileSaving({
 	saveAsMenuItem: document.getElementById('menu-file-save-as'),
 	exportMenuItem: document.getElementById('menu-file-export'),
 	getBaseFileName: canvasDocument.getDownloadBaseName,
+	getSpuFileName: () => {
+		if (lastLoadedSource && lastLoadedSource.fileName) {
+			return lastLoadedSource.fileName;
+		}
+		return canvasDocument.getDownloadBaseName();
+	},
 	getSpuSourceCanvas: () => {
 		if (spectrumSession) {
 			return spectrumSession.baseCanvas;

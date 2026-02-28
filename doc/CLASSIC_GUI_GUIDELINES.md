@@ -1,6 +1,6 @@
 # Classic GUI Guidelines (GEM-style, MacPaint-era behavior)
 
-This document defines the canonical GUI behavior and visual rules for Spectrum512Painter.
+This document defines the canonical GUI behavior and visual rules for Spectrum 512 Painter.
 It is intentionally strict to keep the interface coherent and period-correct.
 
 ## 1. Design Intent

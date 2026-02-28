@@ -1,7 +1,7 @@
-# Spectrum512Painter - Agent Guidelines
+# Spectrum 512 Painter - Agent Guidelines
 
 ## Project Purpose
-This project is a painting program for the **Spectrum512 Atari ST image format**.
+This project is a painting program for the **Spectrum 512 Atari ST image format**.
 
 ## Core Technical Constraints
 - Use **HTML5/WebGL** technology only.
@@ -21,7 +21,7 @@ This project is a painting program for the **Spectrum512 Atari ST image format**
 - `js/io/*`: file loading, saving, and export handlers.
 - `js/tools/*`: tool state, tool controller, tool registry, helpers, and per-tool implementations.
 - `js/imaging/*`: image processing and color operations (for example quantization, palette mapping, dithering, conversions).
-- `js/formats/*`: file format encode/decode modules (for example Spectrum512 readers/writers and related bitmap import/export codecs).
+- `js/formats/*`: file format encode/decode modules (for example Spectrum 512 readers/writers and related bitmap import/export codecs).
 - `js/config/*`: shared static configuration (for example pattern class lists).
 
 ### GEM IMG/XIMG Format Notes
