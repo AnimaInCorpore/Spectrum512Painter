@@ -1,5 +1,5 @@
-import { RemapSpectrum512Image7 } from '../../jscolorquantizer/modules/quantizers/spectrum512.js';
-import { OklchDistance, rgbToOklch } from '../../jscolorquantizer/modules/quantizers/core.js';
+import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/spectrum512.js';
+import { OklchDistance, rgbToOklch } from '../vendor/jscolorquantizer/quantizers/core.js';
 import { createSpectrumCanvas } from './spectrum.js';
 
 export const SPECTRUM512_TARGETS = {
