@@ -36,6 +36,7 @@ const spectrumToggleEntry = document.getElementById('menu-color-spectrum512');
 const target512Entry = document.getElementById('menu-color-target-512');
 const target4096Entry = document.getElementById('menu-color-target-4096');
 const target32768Entry = document.getElementById('menu-color-target-32768');
+const ditherChecksEntry = document.getElementById('menu-color-dither-checks');
 const ditherFsEntry = document.getElementById('menu-color-dither-fs');
 const ditherFs85Entry = document.getElementById('menu-color-dither-fs-85');
 const ditherFs75Entry = document.getElementById('menu-color-dither-fs-75');
@@ -49,6 +50,7 @@ const targetEntryMap = {
 };
 
 const ditherEntryMap = {
+	checks: ditherChecksEntry,
 	floydSteinberg: ditherFsEntry,
 	floydSteinberg85: ditherFs85Entry,
 	floydSteinberg75: ditherFs75Entry,
@@ -58,12 +60,12 @@ const ditherEntryMap = {
 
 let spectrum512Enabled = true;
 let spectrumTarget = 'ste4096';
-let spectrumDither = 'floydSteinberg';
+let spectrumDither = 'checks';
 let lastLoadedSource = null;
 let sourceRevision = 0;
 let spectrumSession = null;
 let viewportScroller = null;
-const DITHER_MENU_ENABLED = false;
+const DITHER_MENU_ENABLED = true;
 const BITS_TO_SPECTRUM_TARGET = {
 	3: 'st512',
 	4: 'ste4096',
@@ -77,9 +79,11 @@ const canvasDocument = createCanvasDocument({
 
 function getSpectrumConversionOptions() {
 	const target = SPECTRUM512_TARGETS[spectrumTarget] || SPECTRUM512_TARGETS.ste4096;
+	const ditherPreset = FLOYD_STEINBERG_DITHER_PRESETS[spectrumDither] || FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg;
 	return {
 		bitsPerColor: target.bitsPerColor,
-		ditherPattern: null
+		ditherMode: ditherPreset.mode || 'errorDiffusion',
+		ditherPattern: ditherPreset.pattern || null
 	};
 }
 

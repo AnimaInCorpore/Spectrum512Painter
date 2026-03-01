@@ -2,6 +2,9 @@ import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/sp
 import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
 import { createSpectrumCanvas } from './spectrum.js';
 
+const DITHER_MODE_ERROR_DIFFUSION = 'errorDiffusion';
+const DITHER_MODE_CHECKS = 'checks';
+
 export const SPECTRUM512_TARGETS = {
 	st512: { bitsPerColor: 3, label: '512 (ST)' },
 	ste4096: { bitsPerColor: 4, label: '4096 (STE)' },
@@ -9,30 +12,50 @@ export const SPECTRUM512_TARGETS = {
 };
 
 export const FLOYD_STEINBERG_DITHER_PRESETS = {
+	checks: {
+		label: 'Checks (OKLab)',
+		mode: DITHER_MODE_CHECKS,
+		pattern: null
+	},
 	floydSteinberg: {
 		label: 'Floyd-Steinberg',
+		mode: DITHER_MODE_ERROR_DIFFUSION,
 		pattern: [0, 0, 0, 7.0 / 16.0, 0, 0, 3.0 / 16.0, 5.0 / 16.0, 1.0 / 16.0, 0, 0, 0, 0, 0, 0]
 	},
 	floydSteinberg85: {
 		label: 'Floyd-Steinberg (85%)',
+		mode: DITHER_MODE_ERROR_DIFFUSION,
 		pattern: [0, 0, 0, 7.0 * 0.85 / 16.0, 0, 0, 3.0 * 0.85 / 16.0, 5.0 * 0.85 / 16.0, 1.0 * 0.85 / 16.0, 0, 0, 0, 0, 0, 0]
 	},
 	floydSteinberg75: {
 		label: 'Floyd-Steinberg (75%)',
+		mode: DITHER_MODE_ERROR_DIFFUSION,
 		pattern: [0, 0, 0, 7.0 * 0.75 / 16.0, 0, 0, 3.0 * 0.75 / 16.0, 5.0 * 0.75 / 16.0, 1.0 * 0.75 / 16.0, 0, 0, 0, 0, 0, 0]
 	},
 	floydSteinberg50: {
 		label: 'Floyd-Steinberg (50%)',
+		mode: DITHER_MODE_ERROR_DIFFUSION,
 		pattern: [0, 0, 0, 7.0 * 0.5 / 16.0, 0, 0, 3.0 * 0.5 / 16.0, 5.0 * 0.5 / 16.0, 1.0 * 0.5 / 16.0, 0, 0, 0, 0, 0, 0]
 	},
 	falseFloydSteinberg: {
 		label: 'False Floyd-Steinberg',
+		mode: DITHER_MODE_ERROR_DIFFUSION,
 		pattern: [0, 0, 0, 3.0 / 8.0, 0, 0, 0, 3.0 / 8.0, 2.0 / 8.0, 0, 0, 0, 0, 0, 0]
 	}
 };
 
 const DEFAULT_BITS_PER_COLOR = SPECTRUM512_TARGETS.ste4096.bitsPerColor;
 const DEFAULT_DITHER_PATTERN = FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg.pattern;
+
+function resolveDitherOptions(options) {
+	const mode = options.ditherMode === DITHER_MODE_CHECKS
+		? DITHER_MODE_CHECKS
+		: DITHER_MODE_ERROR_DIFFUSION;
+	const pattern = mode === DITHER_MODE_ERROR_DIFFUSION
+		? (options.ditherPattern || DEFAULT_DITHER_PATTERN)
+		: null;
+	return { mode, pattern };
+}
 
 export function getSpectrum512ColorSlotIndex(x, colorIndex) {
 	let temp = 10 * colorIndex;
@@ -255,8 +278,150 @@ function quantizeSlots(colorSlots, shadesScale, inverseShadesScale) {
 	}
 }
 
-function remapLine(lineData, targetData, width, y, colorSlots) {
+function getLineSlotsAtX(colorSlots, x) {
+	const slots = new Array(16);
+	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
+		slots[colorIndex] = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
+	}
+	return slots;
+}
+
+function sortChecksPairByLightness(colorA, colorB) {
+	const lightnessA = colorA.oklab[0];
+	const lightnessB = colorB.oklab[0];
+
+	if (lightnessA < lightnessB) {
+		return [colorA, colorB];
+	}
+	if (lightnessB < lightnessA) {
+		return [colorB, colorA];
+	}
+	return colorA.slotIndex <= colorB.slotIndex
+		? [colorA, colorB]
+		: [colorB, colorA];
+}
+
+function compareSlotsByLightness(slotA, slotB) {
+	const lightnessDelta = slotA.oklab[0] - slotB.oklab[0];
+	if (lightnessDelta !== 0) {
+		return lightnessDelta;
+	}
+	return slotA.slotIndex - slotB.slotIndex;
+}
+
+function createChecksIntermediateColor(colorA, colorB) {
+	if (colorA.count < 1 || colorB.count < 1) {
+		return null;
+	}
+	if (colorA.red === colorB.red && colorA.green === colorB.green && colorA.blue === colorB.blue) {
+		return null;
+	}
+	const [darkerColor, lighterColor] = sortChecksPairByLightness(colorA, colorB);
+	return {
+		colorA: darkerColor,
+		colorB: lighterColor,
+		oklab: [
+			(colorA.oklab[0] + colorB.oklab[0]) * 0.5,
+			(colorA.oklab[1] + colorB.oklab[1]) * 0.5,
+			(colorA.oklab[2] + colorB.oklab[2]) * 0.5
+		]
+	};
+}
+
+function buildChecksIntermediateColors(lineSlots) {
+	const intermediates = [];
+	const sortedSlots = lineSlots.slice().sort(compareSlotsByLightness);
+
+	for (let index = 0; index < sortedSlots.length - 1; index += 1) {
+		const intermediate = createChecksIntermediateColor(
+			sortedSlots[index],
+			sortedSlots[index + 1]
+		);
+		if (intermediate) {
+			intermediates.push(intermediate);
+		}
+	}
+
+	return intermediates;
+}
+
+function updateLineSlotsAtX(lineSlots, colorSlots, x, changedSlotIndices) {
+	changedSlotIndices.length = 0;
+	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
+		const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
+		if (lineSlots[colorIndex] === slot) {
+			continue;
+		}
+		lineSlots[colorIndex] = slot;
+		changedSlotIndices.push(colorIndex);
+	}
+}
+
+function findClosestSlotMatch(pixelOklab, lineSlots) {
+	let closestDistance = Number.MAX_VALUE;
+	let slot = null;
+
+	for (let i = 0; i < lineSlots.length; i += 1) {
+		const candidate = lineSlots[i];
+		const distance = OklabDistance(pixelOklab, candidate.oklab);
+		if (distance < closestDistance) {
+			closestDistance = distance;
+			slot = candidate;
+		}
+	}
+
+	return { slot, distance: closestDistance };
+}
+
+function findClosestIntermediateMatch(pixelOklab, intermediates) {
+	let closestDistance = Number.MAX_VALUE;
+	let intermediate = null;
+
+	for (let i = 0; i < intermediates.length; i += 1) {
+		const candidate = intermediates[i];
+		const distance = OklabDistance(pixelOklab, candidate.oklab);
+		if (distance < closestDistance) {
+			closestDistance = distance;
+			intermediate = candidate;
+		}
+	}
+
+	if (!intermediate) {
+		return null;
+	}
+	return { intermediate, distance: closestDistance };
+}
+
+function pickChecksColor(intermediate, x, y) {
+	const lineIsEven = (y & 1) === 0;
+	const columnIsEven = (x & 1) === 0;
+	const useFirstColor = lineIsEven ? columnIsEven : !columnIsEven;
+	return useFirstColor ? intermediate.colorA : intermediate.colorB;
+}
+
+function remapLine(
+	lineData,
+	targetData,
+	width,
+	y,
+	colorSlots,
+	ditherMode
+) {
+	const useChecksDither = ditherMode === DITHER_MODE_CHECKS;
+	const lineSlots = getLineSlotsAtX(colorSlots, 0);
+	let intermediates = useChecksDither
+		? buildChecksIntermediateColors(lineSlots)
+		: null;
+	const changedSlotIndices = [];
+
 	for (let x = 0; x < width; x += 1) {
+		if (x > 0) {
+			updateLineSlotsAtX(lineSlots, colorSlots, x, changedSlotIndices);
+			if (useChecksDither && changedSlotIndices.length > 0) {
+				intermediates = buildChecksIntermediateColors(lineSlots);
+			}
+		}
+
 		const lineIndex = x * 4;
 		const pixelIndex = (x + y * width) * 4;
 		const alpha = lineData[lineIndex + 3];
@@ -268,16 +433,15 @@ function remapLine(lineData, targetData, width, y, colorSlots) {
 		const green = clampColor(lineData[lineIndex + 1]);
 		const blue = clampColor(lineData[lineIndex + 2]);
 		const pixelOklab = rgbToOklab([red, green, blue]);
+		const closestSlotMatch = findClosestSlotMatch(pixelOklab, lineSlots);
+		let remapped = closestSlotMatch.slot;
+		let closestDistance = closestSlotMatch.distance;
 
-		let closestDistance = Number.MAX_VALUE;
-		let remapped = null;
-
-		for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
-			const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
-			const distance = OklabDistance(pixelOklab, slot.oklab);
-			if (distance < closestDistance) {
-				closestDistance = distance;
-				remapped = slot;
+		if (useChecksDither) {
+			const intermediateMatch = findClosestIntermediateMatch(pixelOklab, intermediates);
+			if (intermediateMatch && intermediateMatch.distance < closestDistance) {
+				closestDistance = intermediateMatch.distance;
+				remapped = pickChecksColor(intermediateMatch.intermediate, x, y);
 			}
 		}
 
@@ -305,7 +469,7 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 	const bitsPerColor = Number.isFinite(options.bitsPerColor)
 		? options.bitsPerColor
 		: DEFAULT_BITS_PER_COLOR;
-	const ditherPattern = options.ditherPattern || DEFAULT_DITHER_PATTERN;
+	const ditherOptions = resolveDitherOptions(options);
 	const shadesPerColor = 1 << bitsPerColor;
 	const shadesScale = (shadesPerColor - 1) / 255;
 	const inverseShadesScale = 1 / shadesScale;
@@ -322,7 +486,7 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 			y,
 			shadesScale,
 			inverseShadesScale,
-			ditherPattern
+			ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
 		);
 		const colorSlots = createColorSlots();
 		fillLineColorSlots(lineData, width, colorSlots);
@@ -377,7 +541,7 @@ export function convertSpectrum512Lines({
 	const bitsPerColor = Number.isFinite(options.bitsPerColor)
 		? options.bitsPerColor
 		: DEFAULT_BITS_PER_COLOR;
-	const ditherPattern = options.ditherPattern || DEFAULT_DITHER_PATTERN;
+	const ditherOptions = resolveDitherOptions(options);
 	const shadesPerColor = 1 << bitsPerColor;
 	const shadesScale = (shadesPerColor - 1) / 255;
 	const inverseShadesScale = 1 / shadesScale;
@@ -399,13 +563,20 @@ export function convertSpectrum512Lines({
 			y,
 			shadesScale,
 			inverseShadesScale,
-			ditherPattern
+			ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
 		);
 		const colorSlots = createColorSlots();
 		fillLineColorSlots(lineData, width, colorSlots);
 		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
-		remapLine(lineData, targetData, width, y, colorSlots);
-	}
+			remapLine(
+				lineData,
+				targetData,
+				width,
+				y,
+				colorSlots,
+				ditherOptions.mode
+			);
+		}
 
 	targetContext.putImageData(targetImage, 0, 0);
 }
@@ -414,11 +585,16 @@ export function createSpectrum512ReferenceCanvas(source, options = {}) {
 	const bitsPerColor = Number.isFinite(options.bitsPerColor)
 		? options.bitsPerColor
 		: DEFAULT_BITS_PER_COLOR;
-	const ditherPattern = options.ditherPattern || DEFAULT_DITHER_PATTERN;
+	const ditherOptions = resolveDitherOptions(options);
 
 	const resizedCanvas = createSpectrumCanvas(source);
 	const convertedCanvas = cloneCanvas(resizedCanvas);
 	const imageInfos = {};
-	RemapSpectrum512Image7(convertedCanvas, imageInfos, bitsPerColor, ditherPattern);
+	RemapSpectrum512Image7(
+		convertedCanvas,
+		imageInfos,
+		bitsPerColor,
+		ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
+	);
 	return convertedCanvas;
 }

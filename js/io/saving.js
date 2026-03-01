@@ -47,6 +47,7 @@ function saveSpu({
 	const bytes = encodeSpectrumSpu({
 		sourceCanvas,
 		bitsPerColor: options.bitsPerColor,
+		ditherMode: options.ditherMode,
 		ditherPattern: options.ditherPattern || null
 	});
 
