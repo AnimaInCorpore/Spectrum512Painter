@@ -1,6 +1,7 @@
 import { inBounds, writePixel } from '../helpers/pixels.js';
+import { patternColorAt, resolvePatternMask } from '../helpers/patterns.js';
 
-function sprayBurst(api, point, color) {
+function sprayBurst(api, point, pattern, foregroundColor, backgroundColor) {
 	const radius = 6;
 	for (let i = 0; i < 18; i += 1) {
 		const angle = Math.random() * Math.PI * 2;
@@ -8,6 +9,7 @@ function sprayBurst(api, point, color) {
 		const x = Math.round(point.x + Math.cos(angle) * distance);
 		const y = Math.round(point.y + Math.sin(angle) * distance);
 		if (inBounds(api.canvas, x, y)) {
+			const color = patternColorAt(pattern, foregroundColor, backgroundColor, x, y);
 			writePixel(api.context, x, y, color[0], color[1], color[2], 255);
 		}
 	}
@@ -16,10 +18,16 @@ function sprayBurst(api, point, color) {
 export function createSprayTool() {
 	return {
 		onPointerDown({ api, point }) {
-			const session = { last: { ...point }, timer: null, color: api.foregroundColor };
-			sprayBurst(api, point, session.color);
+			const session = {
+				last: { ...point },
+				timer: null,
+				pattern: resolvePatternMask(api.activePatternIndex),
+				foregroundColor: api.foregroundColor,
+				backgroundColor: api.backgroundColor
+			};
+			sprayBurst(api, point, session.pattern, session.foregroundColor, session.backgroundColor);
 			session.timer = window.setInterval(() => {
-				sprayBurst(api, session.last, session.color);
+				sprayBurst(api, session.last, session.pattern, session.foregroundColor, session.backgroundColor);
 			}, 50);
 			return session;
 		},
@@ -28,7 +36,7 @@ export function createSprayTool() {
 				return;
 			}
 			session.last = { ...point };
-			sprayBurst(api, point, session.color);
+			sprayBurst(api, point, session.pattern, session.foregroundColor, session.backgroundColor);
 		},
 		onPointerUp({ session }) {
 			if (session && session.timer) {

@@ -409,7 +409,6 @@ Object.entries(ditherEntryMap).forEach(([key, entry]) => {
 
 updateSpectrumMenuEntries();
 
-initPatternPalette(patternsGrid, PATTERN_CLASSES);
 initGemMenus({ menuRoot });
 
 viewportScroller = createViewportScroller({
@@ -428,6 +427,8 @@ window.addEventListener('resize', () => {
 
 const toolState = createToolState('pencil');
 const toolRegistry = createToolRegistry();
+
+initPatternPalette(patternsGrid, PATTERN_CLASSES, { toolState });
 
 initColorPalette({
 	colorGrid,

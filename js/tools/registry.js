@@ -2,6 +2,7 @@ import { createEraserTool } from './implementations/eraser.js';
 import { createEllipseTool } from './implementations/ellipse.js';
 import { createFaucetTool } from './implementations/faucet.js';
 import { createFillTool } from './implementations/fill.js';
+import { createFreehandTool } from './implementations/freehand.js';
 import { createLineTool } from './implementations/line.js';
 import { createNoopTool } from './implementations/noop.js';
 import { createPencilTool } from './implementations/pencil.js';
@@ -16,7 +17,7 @@ export function createToolRegistry() {
 
 	return {
 		pencil: createPencilTool(),
-		freehand: createPencilTool(),
+		freehand: createFreehandTool(),
 		eraser: createEraserTool(),
 		line: createLineTool(),
 		fill: createFillTool(),

@@ -1,7 +1,21 @@
-export function initPatternPalette(patternsGrid, patternClasses) {
+function updateActiveTile(tiles, activeIndex) {
+	tiles.forEach((tile, index) => {
+		tile.classList.toggle('active', index === activeIndex);
+	});
+}
+
+export function initPatternPalette(patternsGrid, patternClasses, { toolState } = {}) {
 	if (!patternsGrid) {
 		return;
 	}
+
+	const tiles = [];
+	const setPatternIndex = index => {
+		if (toolState && typeof toolState.setActivePatternIndex === 'function') {
+			toolState.setActivePatternIndex(index);
+		}
+		updateActiveTile(tiles, index);
+	};
 
 	patternClasses.forEach((patternClass, index) => {
 		const tile = document.createElement('div');
@@ -11,17 +25,25 @@ export function initPatternPalette(patternsGrid, patternClasses) {
 		sprite.className = patternClass;
 		tile.appendChild(sprite);
 
-		if (index === 0) {
-			tile.classList.add('active');
-		}
-
 		tile.addEventListener('click', function() {
-			patternsGrid.querySelectorAll('.gem-pattern').forEach(pattern => {
-				pattern.classList.remove('active');
-			});
-			tile.classList.add('active');
+			setPatternIndex(index);
 		});
 
 		patternsGrid.appendChild(tile);
+		tiles.push(tile);
 	});
+
+	const initialPatternIndex = toolState && typeof toolState.getActivePatternIndex === 'function'
+		? Math.max(0, Math.round(toolState.getActivePatternIndex()))
+		: 0;
+	updateActiveTile(tiles, initialPatternIndex);
+
+	if (toolState && typeof toolState.subscribe === 'function') {
+		toolState.subscribe(change => {
+			if (!change || change.type !== 'activePatternIndex') {
+				return;
+			}
+			updateActiveTile(tiles, Math.max(0, Math.round(change.value || 0)));
+		});
+	}
 }

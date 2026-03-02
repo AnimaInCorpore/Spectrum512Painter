@@ -29,6 +29,9 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		get backgroundColor() {
 			return toolState.getBackgroundColor();
 		},
+		get activePatternIndex() {
+			return typeof toolState.getActivePatternIndex === 'function' ? toolState.getActivePatternIndex() : 0;
+		},
 		get lineSize() {
 			return typeof toolState.getLineSize === 'function' ? toolState.getLineSize() : 1;
 		},
@@ -40,6 +43,11 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		},
 		setBackgroundColor(color) {
 			toolState.setBackgroundColor(color);
+		},
+		setActivePatternIndex(index) {
+			if (typeof toolState.setActivePatternIndex === 'function') {
+				toolState.setActivePatternIndex(index);
+			}
 		},
 		setLineSize(size) {
 			if (typeof toolState.setLineSize === 'function') {

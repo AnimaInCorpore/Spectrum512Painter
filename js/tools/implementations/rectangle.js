@@ -1,10 +1,15 @@
 import { constrainToSquare } from '../helpers/geometry.js';
+import { paintPatternStamp, resolvePatternMask } from '../helpers/patterns.js';
 import { createCanvasPreviewSession, renderCanvasPreview } from '../helpers/preview.js';
 import { paintColorStamp } from '../helpers/stroke.js';
 import { drawRectangleOutline, fillRectangle } from '../helpers/shapes.js';
 
 function paintShapePixel(api, color, lineSize, x, y) {
 	paintColorStamp(api.canvas, api.context, color, x, y, lineSize);
+}
+
+function paintPatternPixel(api, pattern, foregroundColor, backgroundColor, x, y) {
+	paintPatternStamp(api.canvas, api.context, pattern, foregroundColor, backgroundColor, x, y, 1);
 }
 
 function resolveRectangleEndPoint(start, point, event) {
@@ -21,6 +26,8 @@ export function createRectangleTool() {
 				start: { ...point },
 				last: { ...point },
 				color: api.foregroundColor,
+				backgroundColor: api.backgroundColor,
+				pattern: resolvePatternMask(api.activePatternIndex),
 				lineSize: api.lineSize,
 				shapeFillMode: api.shapeFillMode,
 				preview: createCanvasPreviewSession(api)
@@ -34,7 +41,7 @@ export function createRectangleTool() {
 			renderCanvasPreview(api, session.preview, () => {
 				if (session.shapeFillMode) {
 					fillRectangle(api.canvas, session.start, session.last, (x, y) => {
-						paintShapePixel(api, session.color, 1, x, y);
+						paintPatternPixel(api, session.pattern, session.color, session.backgroundColor, x, y);
 					});
 					return;
 				}
@@ -51,7 +58,7 @@ export function createRectangleTool() {
 			renderCanvasPreview(api, session.preview, () => {
 				if (session.shapeFillMode) {
 					fillRectangle(api.canvas, session.start, endPoint, (x, y) => {
-						paintShapePixel(api, session.color, 1, x, y);
+						paintPatternPixel(api, session.pattern, session.color, session.backgroundColor, x, y);
 					});
 					return;
 				}

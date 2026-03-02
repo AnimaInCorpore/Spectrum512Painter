@@ -71,21 +71,32 @@ export function floodFill(canvas, ctx, startX, startY, replacement) {
 		data[startIndex + 3]
 	];
 
-	if (
-		source[0] === replacement[0] &&
-		source[1] === replacement[1] &&
-		source[2] === replacement[2] &&
-		source[3] === replacement[3]
-	) {
-		return;
+	const replacementResolver = typeof replacement === 'function' ? replacement : () => replacement;
+	if (typeof replacement !== 'function') {
+		if (
+			source[0] === replacement[0] &&
+			source[1] === replacement[1] &&
+			source[2] === replacement[2] &&
+			source[3] === replacement[3]
+		) {
+			return;
+		}
 	}
 
+	const visited = new Uint8Array(width * height);
 	const stack = [[x, y]];
 	while (stack.length > 0) {
 		const [cx, cy] = stack.pop();
 		if (!inBounds(canvas, cx, cy)) {
 			continue;
 		}
+
+		const pixelOffset = cy * width + cx;
+		if (visited[pixelOffset]) {
+			continue;
+		}
+		visited[pixelOffset] = 1;
+
 		const idx = toIndex(width, cx, cy);
 		if (
 			data[idx] !== source[0] ||
@@ -96,10 +107,18 @@ export function floodFill(canvas, ctx, startX, startY, replacement) {
 			continue;
 		}
 
-		data[idx] = replacement[0];
-		data[idx + 1] = replacement[1];
-		data[idx + 2] = replacement[2];
-		data[idx + 3] = replacement[3];
+		const resolved = replacementResolver(cx, cy, [
+			data[idx],
+			data[idx + 1],
+			data[idx + 2],
+			data[idx + 3]
+		]);
+		if (Array.isArray(resolved) && resolved.length >= 3) {
+			data[idx] = resolved[0];
+			data[idx + 1] = resolved[1];
+			data[idx + 2] = resolved[2];
+			data[idx + 3] = resolved.length >= 4 ? resolved[3] : 255;
+		}
 
 		stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
 	}

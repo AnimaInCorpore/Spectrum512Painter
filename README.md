@@ -37,7 +37,6 @@ If you miss the old desktop feel, toolbox, and classic drawing flow, this is bui
 ## What Is Still In Progress
 
 - `Zoom`, `Marquee`, and `Text` tool icons are shown but not active yet.
-- Pattern tiles are shown and selectable, but not yet painting into the image.
 - Some menu entries are still placeholders for future work.
 - Keyboard shortcuts shown in menus are not all wired yet.
 

@@ -2,6 +2,7 @@ export function createToolState(initialTool = 'pencil') {
 	let activeTool = initialTool;
 	let foregroundColor = [0, 0, 0, 255];
 	let backgroundColor = [255, 255, 255, 255];
+	let activePatternIndex = 0;
 	let lineSize = 1;
 	let shapeFillMode = false;
 	const listeners = new Set();
@@ -57,6 +58,20 @@ export function createToolState(initialTool = 'pencil') {
 			}
 			backgroundColor = nextColor;
 			notify({ type: 'backgroundColor', value: [...backgroundColor] });
+		},
+		getActivePatternIndex() {
+			return activePatternIndex;
+		},
+		setActivePatternIndex(index) {
+			if (!Number.isFinite(index)) {
+				return;
+			}
+			const nextIndex = Math.max(0, Math.round(index));
+			if (nextIndex === activePatternIndex) {
+				return;
+			}
+			activePatternIndex = nextIndex;
+			notify({ type: 'activePatternIndex', value: activePatternIndex });
 		},
 		getLineSize() {
 			return lineSize;

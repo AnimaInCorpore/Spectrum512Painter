@@ -100,6 +100,54 @@ function drawEllipseArc(canvas, ctx, center, radiusX, radiusY, startAngle, endAn
 	}
 }
 
+function fillPolygonFromVertices(canvas, vertices, drawAt) {
+	if (!Array.isArray(vertices) || vertices.length < 3) {
+		return;
+	}
+
+	let minY = Infinity;
+	let maxY = -Infinity;
+	for (let i = 0; i < vertices.length; i += 1) {
+		const y = vertices[i].y;
+		if (y < minY) {
+			minY = y;
+		}
+		if (y > maxY) {
+			maxY = y;
+		}
+	}
+
+	const startY = Math.ceil(minY);
+	const endY = Math.floor(maxY);
+	for (let y = startY; y <= endY; y += 1) {
+		const intersections = [];
+		for (let i = 0; i < vertices.length; i += 1) {
+			const current = vertices[i];
+			const next = vertices[(i + 1) % vertices.length];
+			const minEdgeY = Math.min(current.y, next.y);
+			const maxEdgeY = Math.max(current.y, next.y);
+			if (y < minEdgeY || y >= maxEdgeY) {
+				continue;
+			}
+			const deltaY = next.y - current.y;
+			if (deltaY === 0) {
+				continue;
+			}
+			const t = (y - current.y) / deltaY;
+			intersections.push(current.x + (next.x - current.x) * t);
+		}
+
+		intersections.sort((a, b) => a - b);
+		for (let i = 0; i + 1 < intersections.length; i += 2) {
+			const xStart = Math.ceil(intersections[i]);
+			const xEnd = Math.floor(intersections[i + 1]);
+			for (let x = xStart; x <= xEnd; x += 1) {
+				drawPoint(canvas, x, y, drawAt);
+			}
+		}
+	}
+}
+
 export function boundsFromPoints(start, end) {
 	const from = roundPoint(start);
 	const to = roundPoint(end);
@@ -229,6 +277,13 @@ export function drawRegularPolygonOutline(canvas, ctx, start, end, drawAt, { sid
 		const to = vertices[(i + 1) % vertices.length];
 		drawSegment(canvas, ctx, from, to, drawAt);
 	}
+}
+
+export function fillRegularPolygon(canvas, start, end, drawAt, { sides = 5 } = {}) {
+	const safeSides = Math.max(3, Math.round(sides));
+	const bounds = boundsFromPoints(start, end);
+	const vertices = buildRegularPolygonVertices(bounds, safeSides);
+	fillPolygonFromVertices(canvas, vertices, drawAt);
 }
 
 export function drawPieSliceOutline(canvas, ctx, centerPoint, edgePoint, drawAt) {
