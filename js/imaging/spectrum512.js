@@ -13,7 +13,7 @@ export const SPECTRUM512_TARGETS = {
 
 export const FLOYD_STEINBERG_DITHER_PRESETS = {
 	checks: {
-		label: 'Checks (OKLab)',
+		label: 'Checks (Error Pair)',
 		mode: DITHER_MODE_CHECKS,
 		pattern: null
 	},
@@ -52,8 +52,10 @@ function resolveDitherOptions(options) {
 		? DITHER_MODE_CHECKS
 		: DITHER_MODE_ERROR_DIFFUSION;
 	const pattern = mode === DITHER_MODE_ERROR_DIFFUSION
-		? (options.ditherPattern || DEFAULT_DITHER_PATTERN)
-		: null;
+		&& Array.isArray(options.ditherPattern)
+		&& options.ditherPattern.length > 0
+		? options.ditherPattern
+		: (mode === DITHER_MODE_ERROR_DIFFUSION ? DEFAULT_DITHER_PATTERN : null);
 	return { mode, pattern };
 }
 
@@ -124,61 +126,164 @@ function mergeColors(colorA, colorB) {
 	colorA.count = total;
 }
 
-function buildWorkingLine(sourceData, width, y, shadesScale, inverseShadesScale, ditherPattern) {
-	const line = new Float32Array(width * 4);
-
-	for (let x = 0; x < width; x += 1) {
-		const sourceIndex = (x + y * width) * 4;
-		const lineIndex = x * 4;
-		line[lineIndex] = sourceData[sourceIndex];
-		line[lineIndex + 1] = sourceData[sourceIndex + 1];
-		line[lineIndex + 2] = sourceData[sourceIndex + 2];
-		line[lineIndex + 3] = sourceData[sourceIndex + 3];
-	}
-
-	if (!ditherPattern) {
-		return line;
+function buildPosterizedIntermediateImage(
+	sourceData,
+	width,
+	height,
+	shadesScale,
+	inverseShadesScale,
+	ditherPattern
+) {
+	const intermediateData = new Float32Array(sourceData.length);
+	for (let i = 0; i < sourceData.length; i += 1) {
+		intermediateData[i] = sourceData[i];
 	}
 
 	const right = ditherPattern[3] || 0;
 	const right2 = ditherPattern[4] || 0;
 
-	for (let x = 0; x < width; x += 1) {
-		const index = x * 4;
-		const alpha = line[index + 3];
-		if (alpha !== 255) {
-			continue;
-		}
+	for (let y = 0; y < height; y += 1) {
+		for (let x = 0; x < width; x += 1) {
+			const pixelIndex = (x + y * width) * 4;
+			const alpha = intermediateData[pixelIndex + 3];
+			if (alpha !== 255) {
+				continue;
+			}
 
-		const red = clampColor(line[index]);
-		const green = clampColor(line[index + 1]);
-		const blue = clampColor(line[index + 2]);
-		const quantizedRed = quantizeChannel(red, shadesScale, inverseShadesScale);
-		const quantizedGreen = quantizeChannel(green, shadesScale, inverseShadesScale);
-		const quantizedBlue = quantizeChannel(blue, shadesScale, inverseShadesScale);
+			const red = clampColor(intermediateData[pixelIndex]);
+			const green = clampColor(intermediateData[pixelIndex + 1]);
+			const blue = clampColor(intermediateData[pixelIndex + 2]);
+			const quantizedRed = quantizeChannel(red, shadesScale, inverseShadesScale);
+			const quantizedGreen = quantizeChannel(green, shadesScale, inverseShadesScale);
+			const quantizedBlue = quantizeChannel(blue, shadesScale, inverseShadesScale);
 
-		const redError = red - quantizedRed;
-		const greenError = green - quantizedGreen;
-		const blueError = blue - quantizedBlue;
+			const redError = red - quantizedRed;
+			const greenError = green - quantizedGreen;
+			const blueError = blue - quantizedBlue;
 
-		line[index] = quantizedRed;
-		line[index + 1] = quantizedGreen;
-		line[index + 2] = quantizedBlue;
+			intermediateData[pixelIndex] = quantizedRed;
+			intermediateData[pixelIndex + 1] = quantizedGreen;
+			intermediateData[pixelIndex + 2] = quantizedBlue;
 
-		if (x + 1 < width && right !== 0) {
-			const rightIndex = (x + 1) * 4;
-			line[rightIndex] -= redError * right;
-			line[rightIndex + 1] -= greenError * right;
-			line[rightIndex + 2] -= blueError * right;
-		}
-		if (x + 2 < width && right2 !== 0) {
-			const right2Index = (x + 2) * 4;
-			line[right2Index] -= redError * right2;
-			line[right2Index + 1] -= greenError * right2;
-			line[right2Index + 2] -= blueError * right2;
+			if (x + 1 < width && right !== 0) {
+				const rightIndex = pixelIndex + 4;
+				intermediateData[rightIndex] += redError * right;
+				intermediateData[rightIndex + 1] += greenError * right;
+				intermediateData[rightIndex + 2] += blueError * right;
+			}
+			if (x + 2 < width && right2 !== 0) {
+				const right2Index = pixelIndex + 8;
+				intermediateData[right2Index] += redError * right2;
+				intermediateData[right2Index + 1] += greenError * right2;
+				intermediateData[right2Index + 2] += blueError * right2;
+			}
 		}
 	}
 
+	return intermediateData;
+}
+
+function compareChecksColorsByLightness(colorA, colorB) {
+	const lightnessA = rgbToOklab([colorA.red, colorA.green, colorA.blue])[0];
+	const lightnessB = rgbToOklab([colorB.red, colorB.green, colorB.blue])[0];
+	if (lightnessA !== lightnessB) {
+		return lightnessA - lightnessB;
+	}
+	if (colorA.red !== colorB.red) {
+		return colorA.red - colorB.red;
+	}
+	if (colorA.green !== colorB.green) {
+		return colorA.green - colorB.green;
+	}
+	return colorA.blue - colorB.blue;
+}
+
+function pickChecksColorByParity(baseColor, secondColor, x, y) {
+	let darker = baseColor;
+	let lighter = secondColor;
+	if (compareChecksColorsByLightness(darker, lighter) > 0) {
+		darker = secondColor;
+		lighter = baseColor;
+	}
+	const lineIsEven = (y & 1) === 0;
+	const columnIsEven = (x & 1) === 0;
+	const useDarker = lineIsEven ? columnIsEven : !columnIsEven;
+	return useDarker ? darker : lighter;
+}
+
+function buildChecksIntermediateImage(sourceData, width, height, shadesScale, inverseShadesScale) {
+	const intermediateData = new Float32Array(sourceData.length);
+
+	for (let y = 0; y < height; y += 1) {
+		for (let x = 0; x < width; x += 1) {
+			const pixelIndex = (x + y * width) * 4;
+			const alpha = sourceData[pixelIndex + 3];
+			intermediateData[pixelIndex + 3] = alpha;
+			if (alpha !== 255) {
+				intermediateData[pixelIndex] = sourceData[pixelIndex];
+				intermediateData[pixelIndex + 1] = sourceData[pixelIndex + 1];
+				intermediateData[pixelIndex + 2] = sourceData[pixelIndex + 2];
+				continue;
+			}
+
+			const sourceRed = sourceData[pixelIndex];
+			const sourceGreen = sourceData[pixelIndex + 1];
+			const sourceBlue = sourceData[pixelIndex + 2];
+
+			const baseRed = quantizeChannel(sourceRed, shadesScale, inverseShadesScale);
+			const baseGreen = quantizeChannel(sourceGreen, shadesScale, inverseShadesScale);
+			const baseBlue = quantizeChannel(sourceBlue, shadesScale, inverseShadesScale);
+
+			const redError = sourceRed - baseRed;
+			const greenError = sourceGreen - baseGreen;
+			const blueError = sourceBlue - baseBlue;
+
+			const secondRed = quantizeChannel(clampColor(sourceRed + redError), shadesScale, inverseShadesScale);
+			const secondGreen = quantizeChannel(clampColor(sourceGreen + greenError), shadesScale, inverseShadesScale);
+			const secondBlue = quantizeChannel(clampColor(sourceBlue + blueError), shadesScale, inverseShadesScale);
+
+			const selected = pickChecksColorByParity(
+				{ red: baseRed, green: baseGreen, blue: baseBlue },
+				{ red: secondRed, green: secondGreen, blue: secondBlue },
+				x,
+				y
+			);
+			intermediateData[pixelIndex] = selected.red;
+			intermediateData[pixelIndex + 1] = selected.green;
+			intermediateData[pixelIndex + 2] = selected.blue;
+		}
+	}
+
+	return intermediateData;
+}
+
+function buildSecondIntermediateImage(
+	sourceData,
+	width,
+	height,
+	shadesScale,
+	inverseShadesScale,
+	ditherOptions
+) {
+	if (ditherOptions.mode === DITHER_MODE_CHECKS) {
+		return buildChecksIntermediateImage(sourceData, width, height, shadesScale, inverseShadesScale);
+	}
+	return buildPosterizedIntermediateImage(
+		sourceData,
+		width,
+		height,
+		shadesScale,
+		inverseShadesScale,
+		ditherOptions.pattern || DEFAULT_DITHER_PATTERN
+	);
+}
+
+function getIntermediateLine(intermediateData, width, y) {
+	const line = new Float32Array(width * 4);
+	const sourceOffset = y * width * 4;
+	for (let i = 0; i < width * 4; i += 1) {
+		line[i] = intermediateData[sourceOffset + i];
+	}
 	return line;
 }
 
@@ -286,74 +391,13 @@ function getLineSlotsAtX(colorSlots, x) {
 	return slots;
 }
 
-function sortChecksPairByLightness(colorA, colorB) {
-	const lightnessA = colorA.oklab[0];
-	const lightnessB = colorB.oklab[0];
-
-	if (lightnessA < lightnessB) {
-		return [colorA, colorB];
-	}
-	if (lightnessB < lightnessA) {
-		return [colorB, colorA];
-	}
-	return colorA.slotIndex <= colorB.slotIndex
-		? [colorA, colorB]
-		: [colorB, colorA];
-}
-
-function compareSlotsByLightness(slotA, slotB) {
-	const lightnessDelta = slotA.oklab[0] - slotB.oklab[0];
-	if (lightnessDelta !== 0) {
-		return lightnessDelta;
-	}
-	return slotA.slotIndex - slotB.slotIndex;
-}
-
-function createChecksIntermediateColor(colorA, colorB) {
-	if (colorA.count < 1 || colorB.count < 1) {
-		return null;
-	}
-	if (colorA.red === colorB.red && colorA.green === colorB.green && colorA.blue === colorB.blue) {
-		return null;
-	}
-	const [darkerColor, lighterColor] = sortChecksPairByLightness(colorA, colorB);
-	return {
-		colorA: darkerColor,
-		colorB: lighterColor,
-		oklab: [
-			(colorA.oklab[0] + colorB.oklab[0]) * 0.5,
-			(colorA.oklab[1] + colorB.oklab[1]) * 0.5,
-			(colorA.oklab[2] + colorB.oklab[2]) * 0.5
-		]
-	};
-}
-
-function buildChecksIntermediateColors(lineSlots) {
-	const intermediates = [];
-	const sortedSlots = lineSlots.slice().sort(compareSlotsByLightness);
-
-	for (let index = 0; index < sortedSlots.length - 1; index += 1) {
-		const intermediate = createChecksIntermediateColor(
-			sortedSlots[index],
-			sortedSlots[index + 1]
-		);
-		if (intermediate) {
-			intermediates.push(intermediate);
-		}
-	}
-
-	return intermediates;
-}
-
-function updateLineSlotsAtX(lineSlots, colorSlots, x, changedSlotIndices) {
-	changedSlotIndices.length = 0;
+function updateLineSlotsAtX(lineSlots, colorSlots, x) {
 	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
 		const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
 		if (lineSlots[colorIndex] === slot) {
 			continue;
 		}
 		lineSlots[colorIndex] = slot;
-		changedSlotIndices.push(colorIndex);
 	}
 }
 
@@ -373,53 +417,18 @@ function findClosestSlotMatch(pixelOklab, lineSlots) {
 	return { slot, distance: closestDistance };
 }
 
-function findClosestIntermediateMatch(pixelOklab, intermediates) {
-	let closestDistance = Number.MAX_VALUE;
-	let intermediate = null;
-
-	for (let i = 0; i < intermediates.length; i += 1) {
-		const candidate = intermediates[i];
-		const distance = OklabDistance(pixelOklab, candidate.oklab);
-		if (distance < closestDistance) {
-			closestDistance = distance;
-			intermediate = candidate;
-		}
-	}
-
-	if (!intermediate) {
-		return null;
-	}
-	return { intermediate, distance: closestDistance };
-}
-
-function pickChecksColor(intermediate, x, y) {
-	const lineIsEven = (y & 1) === 0;
-	const columnIsEven = (x & 1) === 0;
-	const useFirstColor = lineIsEven ? columnIsEven : !columnIsEven;
-	return useFirstColor ? intermediate.colorA : intermediate.colorB;
-}
-
 function remapLine(
 	lineData,
 	targetData,
 	width,
 	y,
-	colorSlots,
-	ditherMode
+	colorSlots
 ) {
-	const useChecksDither = ditherMode === DITHER_MODE_CHECKS;
 	const lineSlots = getLineSlotsAtX(colorSlots, 0);
-	let intermediates = useChecksDither
-		? buildChecksIntermediateColors(lineSlots)
-		: null;
-	const changedSlotIndices = [];
 
 	for (let x = 0; x < width; x += 1) {
 		if (x > 0) {
-			updateLineSlotsAtX(lineSlots, colorSlots, x, changedSlotIndices);
-			if (useChecksDither && changedSlotIndices.length > 0) {
-				intermediates = buildChecksIntermediateColors(lineSlots);
-			}
+			updateLineSlotsAtX(lineSlots, colorSlots, x);
 		}
 
 		const lineIndex = x * 4;
@@ -434,16 +443,7 @@ function remapLine(
 		const blue = clampColor(lineData[lineIndex + 2]);
 		const pixelOklab = rgbToOklab([red, green, blue]);
 		const closestSlotMatch = findClosestSlotMatch(pixelOklab, lineSlots);
-		let remapped = closestSlotMatch.slot;
-		let closestDistance = closestSlotMatch.distance;
-
-		if (useChecksDither) {
-			const intermediateMatch = findClosestIntermediateMatch(pixelOklab, intermediates);
-			if (intermediateMatch && intermediateMatch.distance < closestDistance) {
-				closestDistance = intermediateMatch.distance;
-				remapped = pickChecksColor(intermediateMatch.intermediate, x, y);
-			}
-		}
+		const remapped = closestSlotMatch.slot;
 
 		if (!remapped) {
 			continue;
@@ -477,17 +477,18 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 	const sourceContext = sourceCanvas.getContext('2d');
 	const sourceImage = sourceContext.getImageData(0, 0, width, height);
 	const sourceData = sourceImage.data;
+	const intermediateData = buildSecondIntermediateImage(
+		sourceData,
+		width,
+		height,
+		shadesScale,
+		inverseShadesScale,
+		ditherOptions
+	);
 	const lines = new Array(height);
 
 	for (let y = 0; y < height; y += 1) {
-		const lineData = buildWorkingLine(
-			sourceData,
-			width,
-			y,
-			shadesScale,
-			inverseShadesScale,
-			ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
-		);
+		const lineData = getIntermediateLine(intermediateData, width, y);
 		const colorSlots = createColorSlots();
 		fillLineColorSlots(lineData, width, colorSlots);
 		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
@@ -555,28 +556,28 @@ export function convertSpectrum512Lines({
 	const targetImage = targetContext.getImageData(0, 0, width, height);
 	const sourceData = sourceImage.data;
 	const targetData = targetImage.data;
+	const intermediateData = buildSecondIntermediateImage(
+		sourceData,
+		width,
+		height,
+		shadesScale,
+		inverseShadesScale,
+		ditherOptions
+	);
 
 	for (let y = startY; y <= endY; y += 1) {
-		const lineData = buildWorkingLine(
-			sourceData,
-			width,
-			y,
-			shadesScale,
-			inverseShadesScale,
-			ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
-		);
+		const lineData = getIntermediateLine(intermediateData, width, y);
 		const colorSlots = createColorSlots();
 		fillLineColorSlots(lineData, width, colorSlots);
 		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
-			remapLine(
-				lineData,
-				targetData,
-				width,
-				y,
-				colorSlots,
-				ditherOptions.mode
-			);
-		}
+		remapLine(
+			lineData,
+			targetData,
+			width,
+			y,
+			colorSlots
+		);
+	}
 
 	targetContext.putImageData(targetImage, 0, 0);
 }
