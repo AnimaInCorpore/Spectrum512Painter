@@ -1,9 +1,17 @@
 import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/spectrum512.js';
 import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
 import { createSpectrumCanvas } from './spectrum.js';
+import { optimizeSpectrum512LineSlotsBruteForce } from './spectrum512-bruteforce-webgl.js';
 
 const DITHER_MODE_ERROR_DIFFUSION = 'errorDiffusion';
 const DITHER_MODE_CHECKS = 'checks';
+const OPTIMIZER_MODE_GREEDY = 'greedy';
+const OPTIMIZER_MODE_BRUTE_FORCE_WEBGL = 'bruteForceWebgl';
+
+export const SPECTRUM512_OPTIMIZER_MODES = {
+	greedy: OPTIMIZER_MODE_GREEDY,
+	bruteForceWebgl: OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
+};
 
 export const SPECTRUM512_TARGETS = {
 	st512: { bitsPerColor: 3, label: '512 (ST)' },
@@ -57,6 +65,12 @@ function resolveDitherOptions(options) {
 		? options.ditherPattern
 		: (mode === DITHER_MODE_ERROR_DIFFUSION ? DEFAULT_DITHER_PATTERN : null);
 	return { mode, pattern };
+}
+
+function resolveOptimizerMode(options) {
+	return options.optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
+		? OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
+		: OPTIMIZER_MODE_GREEDY;
 }
 
 export function getSpectrum512ColorSlotIndex(x, colorIndex) {
@@ -383,6 +397,55 @@ function quantizeSlots(colorSlots, shadesScale, inverseShadesScale) {
 	}
 }
 
+function applyBruteForceLineOptimization({
+	lineData,
+	width,
+	bitsPerColor,
+	colorSlots
+}) {
+	const optimizedSlots = optimizeSpectrum512LineSlotsBruteForce({
+		lineData,
+		width,
+		bitsPerColor,
+		initialSlots: colorSlots
+	});
+	if (!optimizedSlots || optimizedSlots.length !== colorSlots.length) {
+		return;
+	}
+	for (let i = 0; i < colorSlots.length; i += 1) {
+		colorSlots[i].red = optimizedSlots[i].red;
+		colorSlots[i].green = optimizedSlots[i].green;
+		colorSlots[i].blue = optimizedSlots[i].blue;
+		colorSlots[i].oklab = rgbToOklab([
+			colorSlots[i].red,
+			colorSlots[i].green,
+			colorSlots[i].blue
+		]);
+	}
+}
+
+function buildLineColorSlots({
+	lineData,
+	width,
+	bitsPerColor,
+	shadesScale,
+	inverseShadesScale,
+	optimizerMode
+}) {
+	const colorSlots = createColorSlots();
+	fillLineColorSlots(lineData, width, colorSlots);
+	quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
+	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
+		applyBruteForceLineOptimization({
+			lineData,
+			width,
+			bitsPerColor,
+			colorSlots
+		});
+	}
+	return colorSlots;
+}
+
 function getLineSlotsAtX(colorSlots, x) {
 	const slots = new Array(16);
 	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
@@ -470,6 +533,7 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 		? options.bitsPerColor
 		: DEFAULT_BITS_PER_COLOR;
 	const ditherOptions = resolveDitherOptions(options);
+	const optimizerMode = resolveOptimizerMode(options);
 	const shadesPerColor = 1 << bitsPerColor;
 	const shadesScale = (shadesPerColor - 1) / 255;
 	const inverseShadesScale = 1 / shadesScale;
@@ -489,9 +553,14 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 
 	for (let y = 0; y < height; y += 1) {
 		const lineData = getIntermediateLine(intermediateData, width, y);
-		const colorSlots = createColorSlots();
-		fillLineColorSlots(lineData, width, colorSlots);
-		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
+		const colorSlots = buildLineColorSlots({
+			lineData,
+			width,
+			bitsPerColor,
+			shadesScale,
+			inverseShadesScale,
+			optimizerMode
+		});
 		lines[y] = colorSlots.map(slot => ({
 			red: slot.red,
 			green: slot.green,
@@ -543,6 +612,7 @@ export function convertSpectrum512Lines({
 		? options.bitsPerColor
 		: DEFAULT_BITS_PER_COLOR;
 	const ditherOptions = resolveDitherOptions(options);
+	const optimizerMode = resolveOptimizerMode(options);
 	const shadesPerColor = 1 << bitsPerColor;
 	const shadesScale = (shadesPerColor - 1) / 255;
 	const inverseShadesScale = 1 / shadesScale;
@@ -567,9 +637,14 @@ export function convertSpectrum512Lines({
 
 	for (let y = startY; y <= endY; y += 1) {
 		const lineData = getIntermediateLine(intermediateData, width, y);
-		const colorSlots = createColorSlots();
-		fillLineColorSlots(lineData, width, colorSlots);
-		quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
+		const colorSlots = buildLineColorSlots({
+			lineData,
+			width,
+			bitsPerColor,
+			shadesScale,
+			inverseShadesScale,
+			optimizerMode
+		});
 		remapLine(
 			lineData,
 			targetData,

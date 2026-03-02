@@ -243,7 +243,8 @@ export function encodeSpectrumSpu({
 	sourceCanvas,
 	bitsPerColor = 4,
 	ditherMode,
-	ditherPattern = null
+	ditherPattern = null,
+	optimizerMode
 }) {
 	if (!sourceCanvas) {
 		throw new Error('No source canvas available for SPU encoding.');
@@ -260,12 +261,12 @@ export function encodeSpectrumSpu({
 		targetCanvas: convertedCanvas,
 		yStart: 0,
 		yEnd: SPECTRUM_CANVAS_HEIGHT - 1,
-		options: { bitsPerColor, ditherMode, ditherPattern }
+		options: { bitsPerColor, ditherMode, ditherPattern, optimizerMode }
 	});
 
 	const lineSlots = computeSpectrum512LineColorSlots({
 		sourceCanvas: spectrumSource,
-		options: { bitsPerColor, ditherMode, ditherPattern }
+		options: { bitsPerColor, ditherMode, ditherPattern, optimizerMode }
 	});
 
 	const convertedData = convertedCanvas

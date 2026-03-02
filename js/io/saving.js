@@ -48,7 +48,8 @@ function saveSpu({
 		sourceCanvas,
 		bitsPerColor: options.bitsPerColor,
 		ditherMode: options.ditherMode,
-		ditherPattern: options.ditherPattern || null
+		ditherPattern: options.ditherPattern || null,
+		optimizerMode: options.optimizerMode
 	});
 
 	const sourceName = typeof getSpuFileName === 'function'

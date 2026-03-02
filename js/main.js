@@ -21,7 +21,8 @@ import {
 import {
 	convertSpectrum512Lines,
 	SPECTRUM512_TARGETS,
-	FLOYD_STEINBERG_DITHER_PRESETS
+	FLOYD_STEINBERG_DITHER_PRESETS,
+	SPECTRUM512_OPTIMIZER_MODES
 } from './imaging/spectrum512.js';
 
 const patternsGrid = document.getElementById('patterns-grid');
@@ -42,6 +43,7 @@ const ditherFs85Entry = document.getElementById('menu-color-dither-fs-85');
 const ditherFs75Entry = document.getElementById('menu-color-dither-fs-75');
 const ditherFs50Entry = document.getElementById('menu-color-dither-fs-50');
 const ditherFalseFsEntry = document.getElementById('menu-color-dither-false-fs');
+const bruteForceShaderEntry = document.getElementById('menu-options-bruteforce-shader');
 
 const targetEntryMap = {
 	st512: target512Entry,
@@ -61,6 +63,7 @@ const ditherEntryMap = {
 let spectrum512Enabled = true;
 let spectrumTarget = 'ste4096';
 let spectrumDither = 'checks';
+let bruteForceShaderEnabled = false;
 let lastLoadedSource = null;
 let sourceRevision = 0;
 let spectrumSession = null;
@@ -83,7 +86,10 @@ function getSpectrumConversionOptions() {
 	return {
 		bitsPerColor: target.bitsPerColor,
 		ditherMode: ditherPreset.mode || 'errorDiffusion',
-		ditherPattern: ditherPreset.pattern || null
+		ditherPattern: ditherPreset.pattern || null,
+		optimizerMode: bruteForceShaderEnabled
+			? SPECTRUM512_OPTIMIZER_MODES.bruteForceWebgl
+			: SPECTRUM512_OPTIMIZER_MODES.greedy
 	};
 }
 
@@ -113,6 +119,11 @@ function updateSpectrumMenuEntries() {
 		entry.classList.toggle('disabled', !DITHER_MENU_ENABLED);
 		entry.setAttribute('aria-disabled', String(!DITHER_MENU_ENABLED));
 	});
+
+	if (bruteForceShaderEntry) {
+		bruteForceShaderEntry.textContent = `Brute-Force Shader ${bruteForceShaderEnabled ? 'On' : 'Off'}`;
+		bruteForceShaderEntry.setAttribute('aria-pressed', String(bruteForceShaderEnabled));
+	}
 }
 
 function computeSpectrumScale() {
@@ -406,6 +417,16 @@ Object.entries(ditherEntryMap).forEach(([key, entry]) => {
 		}
 	});
 });
+
+if (bruteForceShaderEntry) {
+	bruteForceShaderEntry.addEventListener('click', () => {
+		bruteForceShaderEnabled = !bruteForceShaderEnabled;
+		updateSpectrumMenuEntries();
+		if (spectrum512Enabled && lastLoadedSource) {
+			renderSpectrumSession({ resetScroll: false });
+		}
+	});
+}
 
 updateSpectrumMenuEntries();
 
