@@ -95,7 +95,8 @@ precision highp sampler2D;
 uniform sampler2D u_source;
 uniform sampler2D u_candidates;
 uniform int u_sourceWidth;
-uniform int u_candidateCount;
+uniform int u_candidateStride;
+uniform int u_lineCount;
 
 out vec4 outColor;
 
@@ -123,14 +124,26 @@ vec3 linearToOklab(vec3 c) {
 
 void main() {
 	int x = int(gl_FragCoord.x);
-	int candidateIndex = int(gl_FragCoord.y);
-	if (x >= u_sourceWidth || candidateIndex >= u_candidateCount) {
+	int y = int(gl_FragCoord.y);
+	int lineIndex = y / u_candidateStride;
+	int candidateIndex = y - lineIndex * u_candidateStride;
+	if (
+		x >= u_sourceWidth
+		|| lineIndex >= u_lineCount
+		|| candidateIndex >= u_candidateStride
+	) {
 		outColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
 
-	vec3 source = texelFetch(u_source, ivec2(x, 0), 0).rgb;
-	vec3 candidate = texelFetch(u_candidates, ivec2(candidateIndex, 0), 0).rgb;
+	vec4 sourceSample = texelFetch(u_source, ivec2(x, lineIndex), 0);
+	vec4 candidateSample = texelFetch(u_candidates, ivec2(candidateIndex, lineIndex), 0);
+	if (sourceSample.a < 0.5 || candidateSample.a < 0.5) {
+		outColor = vec4(0.0, 0.0, 0.0, 1.0);
+		return;
+	}
+	vec3 source = sourceSample.rgb;
+	vec3 candidate = candidateSample.rgb;
 
 	vec3 sourceLab = linearToOklab(srgbToLinear(source));
 	vec3 candidateLab = linearToOklab(srgbToLinear(candidate));
@@ -224,7 +237,9 @@ function createWebglState() {
 		sourceUniform: gl.getUniformLocation(program, 'u_source'),
 		candidateUniform: gl.getUniformLocation(program, 'u_candidates'),
 		sourceWidthUniform: gl.getUniformLocation(program, 'u_sourceWidth'),
-		candidateCountUniform: gl.getUniformLocation(program, 'u_candidateCount')
+		candidateStrideUniform: gl.getUniformLocation(program, 'u_candidateStride'),
+		lineCountUniform: gl.getUniformLocation(program, 'u_lineCount'),
+		maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) || 0
 	};
 }
 
@@ -244,10 +259,62 @@ export function isSpectrum512BruteForceWebglAvailable() {
 	return Boolean(getWebglState());
 }
 
-function computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candidateCount) {
-	const state = getWebglState();
-	if (!state) {
-		return null;
+function copyBatchDistances(rawDistances, width, rowCount) {
+	const distances = new Float32Array(width * rowCount);
+	let sourceIndex = 0;
+	for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+		const rowOffset = rowIndex * width;
+		for (let x = 0; x < width; x += 1) {
+			distances[rowOffset + x] = rawDistances[sourceIndex];
+			sourceIndex += 4;
+		}
+	}
+	return distances;
+}
+
+function buildBatchSourcePixels(preparedLines, width) {
+	const pixels = new Uint8Array(width * preparedLines.length * 4);
+	for (let lineIndex = 0; lineIndex < preparedLines.length; lineIndex += 1) {
+		const lineOffset = lineIndex * width * 4;
+		pixels.set(preparedLines[lineIndex].sourcePixels, lineOffset);
+	}
+	return pixels;
+}
+
+function buildBatchCandidatePixels(preparedLines, candidateStride) {
+	const pixels = new Uint8Array(candidateStride * preparedLines.length * 4);
+	for (let lineIndex = 0; lineIndex < preparedLines.length; lineIndex += 1) {
+		const lineOffset = lineIndex * candidateStride * 4;
+		pixels.set(preparedLines[lineIndex].candidatePixels, lineOffset);
+	}
+	return pixels;
+}
+
+function extractLineDistancesFromBatch(batchDistances, width, candidateStride, lineIndex, candidateCount) {
+	const distances = new Float32Array(width * candidateCount);
+	for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex += 1) {
+		const sourceOffset = (lineIndex * candidateStride + candidateIndex) * width;
+		const targetOffset = candidateIndex * width;
+		distances.set(batchDistances.subarray(sourceOffset, sourceOffset + width), targetOffset);
+	}
+	return distances;
+}
+
+function computeDistanceTableWebglBatch(state, preparedLines, width, candidateStride) {
+	if (!state || preparedLines.length < 1 || width < 1 || candidateStride < 1) {
+		return false;
+	}
+
+	const lineCount = preparedLines.length;
+	const outputHeight = lineCount * candidateStride;
+	const maxTextureSize = state.maxTextureSize;
+	if (
+		width > maxTextureSize
+		|| lineCount > maxTextureSize
+		|| candidateStride > maxTextureSize
+		|| outputHeight > maxTextureSize
+	) {
+		return false;
 	}
 
 	const {
@@ -262,26 +329,40 @@ function computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candida
 		sourceUniform,
 		candidateUniform,
 		sourceWidthUniform,
-		candidateCountUniform
+		candidateStrideUniform,
+		lineCountUniform
 	} = state;
 
+	const sourcePixels = buildBatchSourcePixels(preparedLines, width);
+	const candidatePixels = buildBatchCandidatePixels(preparedLines, candidateStride);
+
 	canvas.width = width;
-	canvas.height = candidateCount;
+	canvas.height = outputHeight;
 
 	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 	gl.disable(gl.BLEND);
 	gl.disable(gl.DEPTH_TEST);
 
 	gl.bindTexture(gl.TEXTURE_2D, sourceTexture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, sourcePixels);
+	gl.texImage2D(
+		gl.TEXTURE_2D,
+		0,
+		gl.RGBA8,
+		width,
+		lineCount,
+		0,
+		gl.RGBA,
+		gl.UNSIGNED_BYTE,
+		sourcePixels
+	);
 
 	gl.bindTexture(gl.TEXTURE_2D, candidateTexture);
 	gl.texImage2D(
 		gl.TEXTURE_2D,
 		0,
 		gl.RGBA8,
-		candidateCount,
-		1,
+		candidateStride,
+		lineCount,
 		0,
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
@@ -294,7 +375,7 @@ function computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candida
 		0,
 		gl.RGBA32F,
 		width,
-		candidateCount,
+		outputHeight,
 		0,
 		gl.RGBA,
 		gl.FLOAT,
@@ -305,10 +386,10 @@ function computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candida
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
 	if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-		return null;
+		return false;
 	}
 
-	gl.viewport(0, 0, width, candidateCount);
+	gl.viewport(0, 0, width, outputHeight);
 	gl.useProgram(program);
 	gl.bindVertexArray(vao);
 
@@ -319,27 +400,75 @@ function computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candida
 	gl.bindTexture(gl.TEXTURE_2D, candidateTexture);
 	gl.uniform1i(candidateUniform, 1);
 	gl.uniform1i(sourceWidthUniform, width);
-	gl.uniform1i(candidateCountUniform, candidateCount);
+	gl.uniform1i(candidateStrideUniform, candidateStride);
+	gl.uniform1i(lineCountUniform, lineCount);
 
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-	const rawDistances = new Float32Array(width * candidateCount * 4);
-	gl.readPixels(0, 0, width, candidateCount, gl.RGBA, gl.FLOAT, rawDistances);
+	const rawDistances = new Float32Array(width * outputHeight * 4);
+	gl.readPixels(0, 0, width, outputHeight, gl.RGBA, gl.FLOAT, rawDistances);
 
 	gl.bindVertexArray(null);
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-	const distances = new Float32Array(width * candidateCount);
-	let sourceIndex = 0;
-	for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex += 1) {
-		const lineOffset = candidateIndex * width;
-		for (let x = 0; x < width; x += 1) {
-			distances[lineOffset + x] = rawDistances[sourceIndex];
-			sourceIndex += 4;
-		}
+	const batchDistances = copyBatchDistances(rawDistances, width, outputHeight);
+	for (let lineIndex = 0; lineIndex < lineCount; lineIndex += 1) {
+		const prepared = preparedLines[lineIndex];
+		prepared.distances = extractLineDistancesFromBatch(
+			batchDistances,
+			width,
+			candidateStride,
+			lineIndex,
+			prepared.candidateCount
+		);
 	}
 
-	return distances;
+	return true;
+}
+
+function computeDistanceTablesWebglForPreparedLines(preparedLines, width) {
+	if (!Array.isArray(preparedLines) || preparedLines.length < 1) {
+		return false;
+	}
+
+	const state = getWebglState();
+	if (!state || width > state.maxTextureSize) {
+		return false;
+	}
+
+	let offset = 0;
+	while (offset < preparedLines.length) {
+		let batchCount = 0;
+		let candidateStride = 0;
+
+		while (offset + batchCount < preparedLines.length) {
+			const prepared = preparedLines[offset + batchCount];
+			const nextStride = Math.max(candidateStride, prepared.candidateCount);
+			const nextLineCount = batchCount + 1;
+			if (
+				nextStride > state.maxTextureSize
+				|| nextLineCount > state.maxTextureSize
+				|| nextStride * nextLineCount > state.maxTextureSize
+			) {
+				break;
+			}
+			candidateStride = nextStride;
+			batchCount = nextLineCount;
+		}
+
+		if (batchCount < 1) {
+			return false;
+		}
+
+		const batch = preparedLines.slice(offset, offset + batchCount);
+		if (!computeDistanceTableWebglBatch(state, batch, width, candidateStride)) {
+			return false;
+		}
+
+		offset += batchCount;
+	}
+
+	return true;
 }
 
 function computeDistanceTableCpu(sourcePixels, candidates, width) {
@@ -706,6 +835,168 @@ function buildOptimizedSlotsFromAssignment(assignment, candidates) {
 	return slots;
 }
 
+function cloneSlots(initialSlots) {
+	const cloned = new Array(SLOT_COUNT);
+	for (let slotIndex = 0; slotIndex < SLOT_COUNT; slotIndex += 1) {
+		const slot = initialSlots[slotIndex];
+		cloned[slotIndex] = {
+			red: slot.red,
+			green: slot.green,
+			blue: slot.blue
+		};
+	}
+	return cloned;
+}
+
+function hasAnyOpaquePixel(opaqueMask) {
+	for (let i = 0; i < opaqueMask.length; i += 1) {
+		if (opaqueMask[i]) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function prepareLineOptimization({
+	lineData,
+	width,
+	initialSlots,
+	shadesScale,
+	inverseShadesScale,
+	maxCandidates
+}) {
+	const opaqueMask = collectOpaqueMask(lineData, width);
+	if (!hasAnyOpaquePixel(opaqueMask)) {
+		return {
+			prepared: null,
+			optimizedSlots: cloneSlots(initialSlots)
+		};
+	}
+
+	const candidates = buildLineCandidates({
+		lineData,
+		width,
+		initialSlots,
+		shadesScale,
+		inverseShadesScale,
+		maxCandidates
+	});
+	const sourcePixels = createSourceLinePixels(lineData, width);
+	const candidatePixels = createCandidateTexturePixels(candidates);
+	const assignment = buildInitialAssignment(initialSlots, candidates);
+	const slotAccess = buildSlotAccess(width, opaqueMask);
+
+	return {
+		prepared: {
+			candidates,
+			sourcePixels,
+			candidatePixels,
+			candidateCount: candidates.length,
+			assignment,
+			slotAccess,
+			opaqueMask,
+			distances: null
+		},
+		optimizedSlots: null
+	};
+}
+
+function optimizePreparedLine(prepared, width, maxPasses) {
+	const optimizedAssignment = optimizeSlotAssignments({
+		assignment: prepared.assignment,
+		candidateCount: prepared.candidateCount,
+		slotAccess: prepared.slotAccess,
+		distances: prepared.distances,
+		width,
+		opaqueMask: prepared.opaqueMask,
+		maxPasses
+	});
+	return buildOptimizedSlotsFromAssignment(optimizedAssignment, prepared.candidates);
+}
+
+function fillPreparedLineDistances(preparedLines, width) {
+	const hasWebglDistances = computeDistanceTablesWebglForPreparedLines(preparedLines, width);
+	if (!hasWebglDistances) {
+		for (let i = 0; i < preparedLines.length; i += 1) {
+			const prepared = preparedLines[i];
+			prepared.distances = computeDistanceTableCpu(prepared.sourcePixels, prepared.candidates, width);
+		}
+		return;
+	}
+	for (let i = 0; i < preparedLines.length; i += 1) {
+		const prepared = preparedLines[i];
+		if (!prepared.distances) {
+			prepared.distances = computeDistanceTableCpu(prepared.sourcePixels, prepared.candidates, width);
+		}
+	}
+}
+
+export function optimizeSpectrum512LineSlotsBruteForceBatch({
+	lines,
+	width,
+	bitsPerColor,
+	maxCandidates = DEFAULT_MAX_CANDIDATES,
+	maxPasses = DEFAULT_MAX_PASSES
+}) {
+	if (!Array.isArray(lines) || width < 1) {
+		return [];
+	}
+
+	const resolvedBitsPerColor = Number.isFinite(bitsPerColor)
+		? Math.max(1, Math.min(8, Math.floor(bitsPerColor)))
+		: 4;
+	const shadesPerColor = 1 << resolvedBitsPerColor;
+	const shadesScale = (shadesPerColor - 1) / 255;
+	const inverseShadesScale = 1 / shadesScale;
+	const boundedMaxCandidates = Number.isFinite(maxCandidates)
+		? Math.max(16, Math.min(512, Math.floor(maxCandidates)))
+		: DEFAULT_MAX_CANDIDATES;
+	const boundedPasses = Number.isFinite(maxPasses)
+		? Math.max(1, Math.min(12, Math.floor(maxPasses)))
+		: DEFAULT_MAX_PASSES;
+
+	const optimizedLines = new Array(lines.length);
+	const preparedLines = [];
+
+	for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+		const line = lines[lineIndex];
+		if (
+			!line
+			|| !line.lineData
+			|| !line.initialSlots
+			|| line.initialSlots.length !== SLOT_COUNT
+		) {
+			optimizedLines[lineIndex] = null;
+			continue;
+		}
+
+		const preparedLine = prepareLineOptimization({
+			lineData: line.lineData,
+			width,
+			initialSlots: line.initialSlots,
+			shadesScale,
+			inverseShadesScale,
+			maxCandidates: boundedMaxCandidates
+		});
+		if (preparedLine.optimizedSlots) {
+			optimizedLines[lineIndex] = preparedLine.optimizedSlots;
+			continue;
+		}
+		preparedLine.prepared.resultIndex = lineIndex;
+		preparedLines.push(preparedLine.prepared);
+	}
+
+	if (preparedLines.length > 0) {
+		fillPreparedLineDistances(preparedLines, width);
+		for (let i = 0; i < preparedLines.length; i += 1) {
+			const prepared = preparedLines[i];
+			optimizedLines[prepared.resultIndex] = optimizePreparedLine(prepared, width, boundedPasses);
+		}
+	}
+
+	return optimizedLines;
+}
+
 export function optimizeSpectrum512LineSlotsBruteForce({
 	lineData,
 	width,
@@ -718,50 +1009,12 @@ export function optimizeSpectrum512LineSlotsBruteForce({
 		return null;
 	}
 
-	const shadesPerColor = 1 << bitsPerColor;
-	const shadesScale = (shadesPerColor - 1) / 255;
-	const inverseShadesScale = 1 / shadesScale;
-	const boundedMaxCandidates = Math.max(16, Math.min(512, Math.floor(maxCandidates)));
-	const boundedPasses = Math.max(1, Math.min(12, Math.floor(maxPasses)));
-
-	const opaqueMask = collectOpaqueMask(lineData, width);
-	const hasOpaquePixel = opaqueMask.some(value => value === 1);
-	if (!hasOpaquePixel) {
-		return initialSlots.map(slot => ({
-			red: slot.red,
-			green: slot.green,
-			blue: slot.blue
-		}));
-	}
-
-	const candidates = buildLineCandidates({
-		lineData,
+	const optimizedLines = optimizeSpectrum512LineSlotsBruteForceBatch({
+		lines: [{ lineData, initialSlots }],
 		width,
-		initialSlots,
-		shadesScale,
-		inverseShadesScale,
-		maxCandidates: boundedMaxCandidates
+		bitsPerColor,
+		maxCandidates,
+		maxPasses
 	});
-	const sourcePixels = createSourceLinePixels(lineData, width);
-	const candidatePixels = createCandidateTexturePixels(candidates);
-	const candidateCount = candidates.length;
-
-	let distances = computeDistanceTableWebgl(sourcePixels, candidatePixels, width, candidateCount);
-	if (!distances) {
-		distances = computeDistanceTableCpu(sourcePixels, candidates, width);
-	}
-
-	const assignment = buildInitialAssignment(initialSlots, candidates);
-	const slotAccess = buildSlotAccess(width, opaqueMask);
-	const optimizedAssignment = optimizeSlotAssignments({
-		assignment,
-		candidateCount,
-		slotAccess,
-		distances,
-		width,
-		opaqueMask,
-		maxPasses: boundedPasses
-	});
-
-	return buildOptimizedSlotsFromAssignment(optimizedAssignment, candidates);
+	return optimizedLines[0] || null;
 }

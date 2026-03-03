@@ -1,7 +1,7 @@
 import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/spectrum512.js';
 import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
 import { createSpectrumCanvas } from './spectrum.js';
-import { optimizeSpectrum512LineSlotsBruteForce } from './spectrum512-bruteforce-webgl.js';
+import { optimizeSpectrum512LineSlotsBruteForceBatch } from './spectrum512-bruteforce-webgl.js';
 
 const DITHER_MODE_ERROR_DIFFUSION = 'errorDiffusion';
 const DITHER_MODE_CHECKS = 'checks';
@@ -397,18 +397,7 @@ function quantizeSlots(colorSlots, shadesScale, inverseShadesScale) {
 	}
 }
 
-function applyBruteForceLineOptimization({
-	lineData,
-	width,
-	bitsPerColor,
-	colorSlots
-}) {
-	const optimizedSlots = optimizeSpectrum512LineSlotsBruteForce({
-		lineData,
-		width,
-		bitsPerColor,
-		initialSlots: colorSlots
-	});
+function applyOptimizedSlotsToColorSlots(colorSlots, optimizedSlots) {
 	if (!optimizedSlots || optimizedSlots.length !== colorSlots.length) {
 		return;
 	}
@@ -424,26 +413,65 @@ function applyBruteForceLineOptimization({
 	}
 }
 
-function buildLineColorSlots({
+function buildLineColorSlotsBase({
 	lineData,
 	width,
-	bitsPerColor,
 	shadesScale,
-	inverseShadesScale,
-	optimizerMode
+	inverseShadesScale
 }) {
 	const colorSlots = createColorSlots();
 	fillLineColorSlots(lineData, width, colorSlots);
 	quantizeSlots(colorSlots, shadesScale, inverseShadesScale);
-	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
-		applyBruteForceLineOptimization({
-			lineData,
-			width,
-			bitsPerColor,
-			colorSlots
-		});
-	}
 	return colorSlots;
+}
+
+function createLineProcessingEntries({
+	intermediateData,
+	width,
+	yStart,
+	yEnd,
+	shadesScale,
+	inverseShadesScale
+}) {
+	const lineCount = yEnd - yStart + 1;
+	const entries = new Array(lineCount);
+	let entryIndex = 0;
+
+	for (let y = yStart; y <= yEnd; y += 1) {
+		const lineData = getIntermediateLine(intermediateData, width, y);
+		entries[entryIndex] = {
+			y,
+			lineData,
+			colorSlots: buildLineColorSlotsBase({
+				lineData,
+				width,
+				shadesScale,
+				inverseShadesScale
+			})
+		};
+		entryIndex += 1;
+	}
+
+	return entries;
+}
+
+function applyBruteForceOptimizationToEntries({ entries, width, bitsPerColor }) {
+	if (!entries || entries.length < 1) {
+		return;
+	}
+
+	const optimizedEntries = optimizeSpectrum512LineSlotsBruteForceBatch({
+		lines: entries.map(entry => ({
+			lineData: entry.lineData,
+			initialSlots: entry.colorSlots
+		})),
+		width,
+		bitsPerColor
+	});
+
+	for (let i = 0; i < entries.length; i += 1) {
+		applyOptimizedSlotsToColorSlots(entries[i].colorSlots, optimizedEntries[i]);
+	}
 }
 
 function getLineSlotsAtX(colorSlots, x) {
@@ -549,19 +577,26 @@ export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} })
 		inverseShadesScale,
 		ditherOptions
 	);
-	const lines = new Array(height);
-
-	for (let y = 0; y < height; y += 1) {
-		const lineData = getIntermediateLine(intermediateData, width, y);
-		const colorSlots = buildLineColorSlots({
-			lineData,
+	const entries = createLineProcessingEntries({
+		intermediateData,
+		width,
+		yStart: 0,
+		yEnd: height - 1,
+		shadesScale,
+		inverseShadesScale
+	});
+	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
+		applyBruteForceOptimizationToEntries({
+			entries,
 			width,
-			bitsPerColor,
-			shadesScale,
-			inverseShadesScale,
-			optimizerMode
+			bitsPerColor
 		});
-		lines[y] = colorSlots.map(slot => ({
+	}
+
+	const lines = new Array(height);
+	for (let i = 0; i < entries.length; i += 1) {
+		const entry = entries[i];
+		lines[entry.y] = entry.colorSlots.map(slot => ({
 			red: slot.red,
 			green: slot.green,
 			blue: slot.blue
@@ -634,23 +669,30 @@ export function convertSpectrum512Lines({
 		inverseShadesScale,
 		ditherOptions
 	);
-
-	for (let y = startY; y <= endY; y += 1) {
-		const lineData = getIntermediateLine(intermediateData, width, y);
-		const colorSlots = buildLineColorSlots({
-			lineData,
+	const entries = createLineProcessingEntries({
+		intermediateData,
+		width,
+		yStart: startY,
+		yEnd: endY,
+		shadesScale,
+		inverseShadesScale
+	});
+	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
+		applyBruteForceOptimizationToEntries({
+			entries,
 			width,
-			bitsPerColor,
-			shadesScale,
-			inverseShadesScale,
-			optimizerMode
+			bitsPerColor
 		});
+	}
+
+	for (let i = 0; i < entries.length; i += 1) {
+		const entry = entries[i];
 		remapLine(
-			lineData,
+			entry.lineData,
 			targetData,
 			width,
-			y,
-			colorSlots
+			entry.y,
+			entry.colorSlots
 		);
 	}
 
