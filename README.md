@@ -1,50 +1,67 @@
 # Spectrum 512 Painter
 
-A GEM-style paint program for Atari ST fans, running in a modern web browser.
+A classic GEM-style paint program for Atari ST workflows, implemented with HTML5 Canvas/WebGL and ES modules.
 
-If you miss the old desktop feel, toolbox, and classic drawing flow, this is built for that.
+## Current State (March 3, 2026)
 
-## What You Can Do Right Now
+The project is actively usable for painting and Spectrum 512 conversion work.
 
-- Open ST-style picture files (`.IMG`, `.SPU`) and normal images (PNG/JPG/GIF/WebP/BMP).
-- Draw with classic tools like pencil, line, fill, spray, rectangle, ellipse, and more.
-- Pick colors from a full palette, with foreground/background swatches.
-- Turn Spectrum mode on/off in the `Color` menu.
-- Choose target color style:
-  - `512 (ST)`
-  - `4096 (STE)`
-  - `32768 (STE Enhanced)`
-- Save work as `.SPU` or export as `.PNG`.
+### Implemented
 
-## How To Start
+- File I/O
+  - Open: `.SPU`, `.IMG` (including XIMG palette blocks), and common browser image formats.
+  - Save and Save As: `.SPU`.
+  - Export: `.PNG`.
+- GEM IMG decoding
+  - Indexed planes: `1..8`.
+  - True-color pseudo-plane variants: `16` (5:6:5) and `24` (8:8:8).
+  - Documented scanline RLE items and vertical replication marker.
+- Spectrum conversion pipeline
+  - Toggle: `Color -> Spectrum 512 On/Off`.
+  - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
+  - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
+  - Optimizer toggle: `Options -> Brute-Force Shader On/Off` (WebGL2 path with CPU fallback when unavailable).
+- Canvas and viewport
+  - Default document is a white `320x200` canvas.
+  - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
+  - In Spectrum mode, imported images are normalized to the Spectrum canvas size.
+- Active tools
+  - `Pencil` (pixel toggle draw, Shift-constrained line).
+  - `Freehand` (pattern brush, line-size aware, Shift-constrained line).
+  - `Eraser` (double-click clears visible viewport).
+  - `Line` (Shift constrains to 45-degree steps).
+  - `Fill` (pattern flood fill).
+  - `Spray`.
+  - `Faucet` (eyedropper; `Alt` sets background color).
+  - `Rectangle`, `Rounded Rectangle`, `Ellipse`, `Polygon` (outline and fill mode).
+  - `Pie Slice` (outline).
+- Palette and paint controls
+  - 256-color GEM-style palette with foreground/background swatches.
+  - 21 built-in pattern tiles.
+  - Line size slider (`1..8`).
+  - Shape mode toggle (`FRAME` / `FILL`).
+
+### Not Implemented Yet
+
+- Toolbox icons present but currently no-op: `Zoom`, `Marquee`, `Text`.
+- Many menu entries are placeholders (for example Undo, selection operations, palette load/save, image dialogs).
+- Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts.
+
+## Run Locally
 
 1. Open a terminal in this folder.
-2. Run:
+2. Start a local server, for example:
    ```bash
    python3 -m http.server 8000
    ```
-3. Open [http://localhost:8000](http://localhost:8000) in your browser.
-
-## Quick User Guide
-
-- `File -> Open...` to load a picture.
-- Choose a tool from the left toolbox.
-- Left-click a color tile to set foreground color.
-- Right-click a color tile to set background color.
-- Use `Color -> Spectrum 512 On/Off` to switch Spectrum conversion.
-- `File -> Save` stores as `.SPU`; `File -> Export...` writes `.PNG`.
-
-## What Is Still In Progress
-
-- `Zoom`, `Marquee`, and `Text` tool icons are shown but not active yet.
-- Some menu entries are still placeholders for future work.
-- Keyboard shortcuts shown in menus are not all wired yet.
+   On Windows, `python -m http.server 8000` also works.
+3. Open [http://localhost:8000](http://localhost:8000).
 
 ## Project Notes
 
-- The look and wording follow classic GEM style.
-- The app is self-contained in this repository (no external frameworks).
-- Extra reference docs are in `doc/`:
+- No framework/CDN runtime dependencies are required.
+- Spectrum conversion logic and UI/tooling are split into dedicated ES module areas under `js/` (`ui`, `canvas`, `io`, `tools`, `imaging`, `formats`, `config`).
+- Reference docs are in `doc/`:
   - `CLASSIC_GUI_GUIDELINES.md`
   - `CLASSIC_SCROLLBAR_BEHAVIOR.md`
   - `GEM_Raster_IMG_Format.md`
