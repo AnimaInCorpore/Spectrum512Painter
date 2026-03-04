@@ -2,6 +2,8 @@
 
 A classic GEM-style paint program for Atari ST workflows, implemented with HTML5 Canvas/WebGL and ES modules.
 
+Try it online: [https://painter.anides.de/](https://painter.anides.de/)
+
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
 ## Current State (March 3, 2026)
