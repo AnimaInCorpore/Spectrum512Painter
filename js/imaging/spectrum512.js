@@ -54,6 +54,20 @@ export const FLOYD_STEINBERG_DITHER_PRESETS = {
 
 const DEFAULT_BITS_PER_COLOR = SPECTRUM512_TARGETS.ste4096.bitsPerColor;
 const DEFAULT_DITHER_PATTERN = FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg.pattern;
+const ERROR_DIFFUSION_NEIGHBORS = [
+	{ patternIndex: 3, dx: 1, dy: 0 },
+	{ patternIndex: 4, dx: 2, dy: 0 },
+	{ patternIndex: 5, dx: -2, dy: 1 },
+	{ patternIndex: 6, dx: -1, dy: 1 },
+	{ patternIndex: 7, dx: 0, dy: 1 },
+	{ patternIndex: 8, dx: 1, dy: 1 },
+	{ patternIndex: 9, dx: 2, dy: 1 },
+	{ patternIndex: 10, dx: -2, dy: 2 },
+	{ patternIndex: 11, dx: -1, dy: 2 },
+	{ patternIndex: 12, dx: 0, dy: 2 },
+	{ patternIndex: 13, dx: 1, dy: 2 },
+	{ patternIndex: 14, dx: 2, dy: 2 }
+];
 
 function resolveDitherOptions(options) {
 	const mode = options.ditherMode === DITHER_MODE_CHECKS
@@ -140,7 +154,64 @@ function mergeColors(colorA, colorB) {
 	colorA.count = total;
 }
 
-function buildPosterizedIntermediateImage(
+function diffuseErrorToNeighbor({
+	intermediateData,
+	width,
+	height,
+	x,
+	y,
+	redError,
+	greenError,
+	blueError,
+	ditherPattern,
+	neighbor
+}) {
+	const weight = ditherPattern[neighbor.patternIndex] || 0;
+	if (weight === 0) {
+		return;
+	}
+	const targetX = x + neighbor.dx;
+	const targetY = y + neighbor.dy;
+	if (targetX < 0 || targetX >= width || targetY < 0 || targetY >= height) {
+		return;
+	}
+	const targetIndex = (targetX + targetY * width) * 4;
+	if (intermediateData[targetIndex + 3] !== 255) {
+		return;
+	}
+	intermediateData[targetIndex] += redError * weight;
+	intermediateData[targetIndex + 1] += greenError * weight;
+	intermediateData[targetIndex + 2] += blueError * weight;
+}
+
+function diffuseQuantizationError({
+	intermediateData,
+	width,
+	height,
+	x,
+	y,
+	redError,
+	greenError,
+	blueError,
+	ditherPattern
+}) {
+	for (let i = 0; i < ERROR_DIFFUSION_NEIGHBORS.length; i += 1) {
+		diffuseErrorToNeighbor({
+			intermediateData,
+			width,
+			height,
+			x,
+			y,
+			redError,
+			greenError,
+			blueError,
+			ditherPattern,
+			neighbor: ERROR_DIFFUSION_NEIGHBORS[i]
+		});
+	}
+}
+
+function buildErrorDiffusionIntermediateImage(
 	sourceData,
 	width,
 	height,
@@ -152,9 +223,6 @@ function buildPosterizedIntermediateImage(
 	for (let i = 0; i < sourceData.length; i += 1) {
 		intermediateData[i] = sourceData[i];
 	}
-
-	const right = ditherPattern[3] || 0;
-	const right2 = ditherPattern[4] || 0;
 
 	for (let y = 0; y < height; y += 1) {
 		for (let x = 0; x < width; x += 1) {
@@ -179,18 +247,17 @@ function buildPosterizedIntermediateImage(
 			intermediateData[pixelIndex + 1] = quantizedGreen;
 			intermediateData[pixelIndex + 2] = quantizedBlue;
 
-			if (x + 1 < width && right !== 0) {
-				const rightIndex = pixelIndex + 4;
-				intermediateData[rightIndex] += redError * right;
-				intermediateData[rightIndex + 1] += greenError * right;
-				intermediateData[rightIndex + 2] += blueError * right;
-			}
-			if (x + 2 < width && right2 !== 0) {
-				const right2Index = pixelIndex + 8;
-				intermediateData[right2Index] += redError * right2;
-				intermediateData[right2Index + 1] += greenError * right2;
-				intermediateData[right2Index + 2] += blueError * right2;
-			}
+			diffuseQuantizationError({
+				intermediateData,
+				width,
+				height,
+				x,
+				y,
+				redError,
+				greenError,
+				blueError,
+				ditherPattern
+			});
 		}
 	}
 
@@ -282,7 +349,7 @@ function buildSecondIntermediateImage(
 	if (ditherOptions.mode === DITHER_MODE_CHECKS) {
 		return buildChecksIntermediateImage(sourceData, width, height, shadesScale, inverseShadesScale);
 	}
-	return buildPosterizedIntermediateImage(
+	return buildErrorDiffusionIntermediateImage(
 		sourceData,
 		width,
 		height,

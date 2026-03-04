@@ -93,6 +93,25 @@ function getSpectrumConversionOptions() {
 	};
 }
 
+function getErrorDiffusionDirtyTailRows() {
+	const ditherPreset = FLOYD_STEINBERG_DITHER_PRESETS[spectrumDither] || FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg;
+	if (ditherPreset.mode !== 'errorDiffusion' || !Array.isArray(ditherPreset.pattern)) {
+		return 0;
+	}
+
+	for (let i = 10; i <= 14; i += 1) {
+		if ((ditherPreset.pattern[i] || 0) !== 0) {
+			return 2;
+		}
+	}
+	for (let i = 5; i <= 9; i += 1) {
+		if ((ditherPreset.pattern[i] || 0) !== 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 function setMenuChoiceText(entry, label, selected) {
 	if (!entry) {
 		return;
@@ -246,11 +265,13 @@ function createSpectrumDrawContextProxy(session) {
 	proxy.getImageData = (...args) => baseContext.getImageData(...args);
 	proxy.putImageData = (imageData, x, y) => {
 		baseContext.putImageData(imageData, x, y);
-		scheduleSpectrumDirtyConversion(session, y, y + imageData.height - 1);
+		const tailRows = session.isPassthrough ? 0 : getErrorDiffusionDirtyTailRows();
+		scheduleSpectrumDirtyConversion(session, y, y + imageData.height - 1 + tailRows);
 	};
 	proxy.fillRect = (x, y, width, height) => {
 		baseContext.fillRect(x, y, width, height);
-		scheduleSpectrumDirtyConversion(session, y, y + height - 1);
+		const tailRows = session.isPassthrough ? 0 : getErrorDiffusionDirtyTailRows();
+		scheduleSpectrumDirtyConversion(session, y, y + height - 1 + tailRows);
 	};
 
 	return proxy;
