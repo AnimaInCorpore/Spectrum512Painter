@@ -6,7 +6,7 @@ Try it online: [https://painter.anides.de/](https://painter.anides.de/)
 
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
-## Current State (March 3, 2026)
+## Current State (March 5, 2026)
 
 The project is actively usable for painting and Spectrum 512 conversion work.
 
@@ -30,7 +30,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
   - In Spectrum mode, imported images are normalized to the Spectrum canvas size.
 - Active tools
-  - `Pencil` (pixel toggle draw, Shift-constrained line).
+  - `Pencil` (line-size aware solid-color draw, Shift-constrained line).
   - `Freehand` (pattern brush, line-size aware, Shift-constrained line).
   - `Eraser` (double-click clears visible viewport).
   - `Line` (Shift constrains to 45-degree steps).
@@ -48,7 +48,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 ### Not Implemented Yet
 
 - Toolbox icons present but currently no-op: `Zoom`, `Marquee`, `Text`.
-- Many menu entries are placeholders (for example Undo, selection operations, palette load/save, image dialogs).
+- Many menu entries are placeholders (for example Undo, selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
 - Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts.
 
 ## Run Locally
