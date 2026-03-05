@@ -567,3 +567,25 @@ setupFileSaving({
 });
 
 initializeDefaultDocument();
+
+const aboutOverlay = document.getElementById('about-overlay');
+const aboutMenuItem = document.getElementById('menu-desk-about');
+
+if (aboutOverlay && aboutMenuItem) {
+	const openAbout = () => aboutOverlay.classList.add('open');
+	const closeAbout = () => aboutOverlay.classList.remove('open');
+
+	aboutMenuItem.addEventListener('click', openAbout);
+	document.getElementById('about-close').addEventListener('click', closeAbout);
+	document.getElementById('about-ok').addEventListener('click', closeAbout);
+	aboutOverlay.addEventListener('click', event => {
+		if (event.target === aboutOverlay) {
+			closeAbout();
+		}
+	});
+	document.addEventListener('keydown', event => {
+		if (event.key === 'Escape' && aboutOverlay.classList.contains('open')) {
+			closeAbout();
+		}
+	});
+}
