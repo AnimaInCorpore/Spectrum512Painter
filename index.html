@@ -348,6 +348,38 @@
 		}
 		.gem-canvas-area.show-vertical-scrollbar { grid-template-columns: 1fr 17px; }
 		.gem-canvas-area.show-horizontal-scrollbar { grid-template-rows: 1fr 17px; }
+		.gem-canvas-area.drag-active .gem-canvas-container {
+			background-color: #d7d7d7;
+		}
+		.gem-canvas-area.drag-active .gem-canvas-container::before {
+			content: '';
+			position: absolute;
+			inset: 8px;
+			border: 2px solid var(--black);
+			background-image: var(--dither-2x2);
+			opacity: 0.35;
+			pointer-events: none;
+			z-index: 2;
+		}
+		.gem-canvas-area.drag-active .gem-canvas-container::after {
+			content: 'DROP PICTURE TO OPEN';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			padding: 4px 10px;
+			border: 1px solid var(--black);
+			background: var(--white);
+			font-family: 'Atari ST', sans-serif;
+			font-size: 16px;
+			letter-spacing: 0.03em;
+			white-space: nowrap;
+			pointer-events: none;
+			z-index: 3;
+		}
+		.gem-canvas-area.drag-active #paint {
+			opacity: 0.2;
+		}
 
 		.gem-canvas-container {
 			border-right: 2px solid var(--black);

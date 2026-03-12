@@ -31,6 +31,7 @@ const foregroundSwatch = document.getElementById('color-foreground');
 const backgroundSwatch = document.getElementById('color-background');
 const menuRoot = document.querySelector('.menu-left');
 const canvas = document.getElementById('paint');
+const canvasArea = document.querySelector('.gem-canvas-area');
 const canvasContainer = document.querySelector('.gem-canvas-container');
 const titleElement = document.querySelector('.gem-titlebar-name');
 const spectrumToggleEntry = document.getElementById('menu-color-spectrum512');
@@ -507,6 +508,7 @@ toolController.setContextResolver(() => {
 setupFileLoading({
 	fileInput: document.getElementById('file-open'),
 	openMenuItem: document.getElementById('menu-file-open'),
+	dropTarget: canvasArea,
 	onImageLoaded: ({ image, fileName }) => {
 		lastLoadedSource = {
 			type: 'image',

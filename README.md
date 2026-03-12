@@ -6,7 +6,7 @@ Try it online: [https://painter.anides.de/](https://painter.anides.de/)
 
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
-## Current State (March 5, 2026)
+## Current State (March 12, 2026)
 
 The project is actively usable for painting and Spectrum 512 conversion work.
 
@@ -14,6 +14,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 
 - File I/O
   - Open: `.SPU`, `.IMG` (including XIMG palette blocks), and common browser image formats.
+  - Load sources either from `File -> Open...` or by dragging a file onto the canvas window.
   - Save and Save As: `.SPU`.
   - Export: `.PNG`.
 - GEM IMG decoding
@@ -28,6 +29,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 - Canvas and viewport
   - Default document is a white `320x200` canvas.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
+  - Canvas window accepts drag-and-drop loading with GEM-style hover feedback.
   - In Spectrum mode, imported images are normalized to the Spectrum canvas size.
 - Active tools
   - `Pencil` (line-size aware solid-color draw, Shift-constrained line).
