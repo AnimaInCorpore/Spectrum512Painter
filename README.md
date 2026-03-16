@@ -31,6 +31,10 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
   - Canvas window accepts drag-and-drop loading with GEM-style hover feedback.
   - In Spectrum mode, imported images are normalized to the Spectrum canvas size.
+  - Zoom tool button is a sticky toggle:
+    - enabled: `4x` display zoom.
+    - in Spectrum mode: zoom is applied on top of fit scaling (`fit scale x 4`).
+    - stays active when switching drawing tools, until toggled off.
 - Active tools
   - `Pencil` (line-size aware solid-color draw, Shift-constrained line).
   - `Freehand` (pattern brush, line-size aware, Shift-constrained line).
@@ -54,7 +58,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 
 ### Not Implemented Yet
 
-- Toolbox icons present but currently no-op: `Zoom`, `Marquee`, `Text`.
+- Toolbox icons present but currently no-op: `Marquee`, `Text`.
 - Many menu entries are placeholders (for example selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
 - Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts (Undo/Redo shortcuts are implemented).
 

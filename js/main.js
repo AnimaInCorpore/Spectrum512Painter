@@ -73,6 +73,7 @@ let lastLoadedSource = null;
 let sourceRevision = 0;
 let spectrumSession = null;
 let viewportScroller = null;
+let displayZoomScale = 1;
 const DITHER_MENU_ENABLED = true;
 const BITS_TO_SPECTRUM_TARGET = {
 	3: 'st512',
@@ -80,6 +81,7 @@ const BITS_TO_SPECTRUM_TARGET = {
 	5: 'ste32768'
 };
 const MAX_HISTORY_STEPS = 32;
+const EDIT_ZOOM_SCALE = 4;
 
 const canvasDocument = createCanvasDocument({
 	canvas,
@@ -253,16 +255,31 @@ function computeSpectrumScale() {
 
 function applyDisplayScale() {
 	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH && canvas.height === SPECTRUM_CANVAS_HEIGHT;
-	if (!spectrum512Enabled || !isSpectrumCanvas) {
+	const spectrumFitScale = (spectrum512Enabled && isSpectrumCanvas) ? computeSpectrumScale() : 1;
+	const totalScale = spectrumFitScale * displayZoomScale;
+
+	if (!spectrum512Enabled && totalScale <= 1) {
 		canvas.style.width = '';
 		canvas.style.height = '';
 		canvas.style.imageRendering = '';
 		return;
 	}
-	const scale = computeSpectrumScale();
-	canvas.style.width = `${canvas.width * scale}px`;
-	canvas.style.height = `${canvas.height * scale}px`;
+
+	canvas.style.width = `${canvas.width * totalScale}px`;
+	canvas.style.height = `${canvas.height * totalScale}px`;
 	canvas.style.imageRendering = 'pixelated';
+}
+
+function setDisplayZoomEnabled(enabled) {
+	const nextScale = enabled ? EDIT_ZOOM_SCALE : 1;
+	if (displayZoomScale === nextScale) {
+		return;
+	}
+	displayZoomScale = nextScale;
+	applyDisplayScale();
+	if (viewportScroller) {
+		viewportScroller.recalcScrollBounds();
+	}
 }
 
 function toCanvasFromBitmap(bitmap) {
@@ -583,6 +600,9 @@ initShapeModeControl(document, { toolState });
 initToolSelection(document, {
 	onToolChange: toolId => {
 		toolState.setActiveTool(toolId);
+	},
+	onZoomToggle: enabled => {
+		setDisplayZoomEnabled(enabled);
 	}
 });
 

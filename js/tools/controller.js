@@ -11,6 +11,7 @@ export function createToolController({
 }) {
 	let activeSession = null;
 	let activeTool = null;
+	let activeToolMutatesCanvas = false;
 	const resolveCanvas = () => {
 		if (typeof api.getCanvas === 'function') {
 			return api.getCanvas();
@@ -97,7 +98,10 @@ export function createToolController({
 		if (!activeTool || typeof activeTool.onPointerDown !== 'function') {
 			return;
 		}
-		notifyMutationStart();
+		activeToolMutatesCanvas = activeTool.mutatesCanvas !== false;
+		if (activeToolMutatesCanvas) {
+			notifyMutationStart();
+		}
 		const point = canvasPointFromMouse(event, resolveCanvas());
 		activeSession = activeTool.onPointerDown({ api, event, point }) || null;
 		document.addEventListener('mousemove', onMouseMove);
@@ -117,11 +121,12 @@ export function createToolController({
 			const point = canvasPointFromMouse(event, resolveCanvas());
 			activeTool.onPointerUp({ api, event, point, session: activeSession });
 		}
-		if (activeTool) {
+		if (activeToolMutatesCanvas) {
 			notifyMutationEnd();
 		}
 		activeSession = null;
 		activeTool = null;
+		activeToolMutatesCanvas = false;
 		document.removeEventListener('mousemove', onMouseMove);
 		document.removeEventListener('mouseup', onMouseUp);
 	};
