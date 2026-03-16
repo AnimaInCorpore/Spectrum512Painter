@@ -1,29 +1,70 @@
-function buildRgbCubePalette() {
-	const levels = [0, 51, 102, 153, 204, 255];
-	const colors = [];
-	for (let r = 0; r < levels.length; r += 1) {
-		for (let g = 0; g < levels.length; g += 1) {
-			for (let b = 0; b < levels.length; b += 1) {
-				colors.push([levels[r], levels[g], levels[b]]);
-			}
-		}
+function hsvToRgb(h, s, v) {
+	const hue = ((h % 360) + 360) % 360;
+	const chroma = v * s;
+	const hPrime = hue / 60;
+	const x = chroma * (1 - Math.abs((hPrime % 2) - 1));
+	let r1 = 0;
+	let g1 = 0;
+	let b1 = 0;
+
+	if (hPrime >= 0 && hPrime < 1) {
+		r1 = chroma;
+		g1 = x;
+	} else if (hPrime < 2) {
+		r1 = x;
+		g1 = chroma;
+	} else if (hPrime < 3) {
+		g1 = chroma;
+		b1 = x;
+	} else if (hPrime < 4) {
+		g1 = x;
+		b1 = chroma;
+	} else if (hPrime < 5) {
+		r1 = x;
+		b1 = chroma;
+	} else {
+		r1 = chroma;
+		b1 = x;
 	}
-	return colors;
+
+	const m = v - chroma;
+	return [
+		Math.round((r1 + m) * 255),
+		Math.round((g1 + m) * 255),
+		Math.round((b1 + m) * 255)
+	];
 }
 
-function buildGrayRampPalette(steps) {
+function buildRampRow(rowIndex, width, rowCount) {
 	const colors = [];
-	for (let i = 0; i < steps; i += 1) {
-		const value = Math.round((i / Math.max(1, steps - 1)) * 255);
-		colors.push([value, value, value]);
+	const maxX = Math.max(1, width - 1);
+	const maxY = Math.max(1, rowCount - 1);
+
+	if (rowIndex === 0) {
+		for (let x = 0; x < width; x += 1) {
+			const gray = Math.round((x / maxX) * 255);
+			colors.push([gray, gray, gray]);
+		}
+		return colors;
 	}
+
+	const hue = ((rowIndex - 1) / maxY) * 360;
+	for (let x = 0; x < width; x += 1) {
+		const value = 0.08 + (x / maxX) * 0.92;
+		colors.push(hsvToRgb(hue, 1, Math.min(1, value)));
+	}
+
 	return colors;
 }
 
 function buildGem256Palette() {
-	const cube = buildRgbCubePalette();
-	const grays = buildGrayRampPalette(40);
-	return cube.concat(grays);
+	const width = 16;
+	const rows = 16;
+	const colors = [];
+	for (let row = 0; row < rows; row += 1) {
+		colors.push(...buildRampRow(row, width, rows));
+	}
+	return colors;
 }
 
 export const GEM_256_COLORS = buildGem256Palette();

@@ -6,7 +6,7 @@ Try it online: [https://painter.anides.de/](https://painter.anides.de/)
 
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
-## Current State (March 12, 2026)
+## Current State (March 16, 2026)
 
 The project is actively usable for painting and Spectrum 512 conversion work.
 
@@ -49,12 +49,14 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 - Editing history
   - Undo/Redo with a fixed history depth of `32` actions.
   - Menu commands (`Options -> Undo`, `Options -> Redo`) and shortcuts (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`).
+  - History is cleared when a new file is opened.
+  - Redo replay keeps 1:1 pixel copies crisp (no unintended smoothing artifacts) and avoids expensive session rebuilds during undo/redo cycling.
 
 ### Not Implemented Yet
 
 - Toolbox icons present but currently no-op: `Zoom`, `Marquee`, `Text`.
 - Many menu entries are placeholders (for example selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
-- Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts.
+- Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts (Undo/Redo shortcuts are implemented).
 
 ## Run Locally
 
