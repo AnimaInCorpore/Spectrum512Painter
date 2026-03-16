@@ -1,6 +1,14 @@
 import { canvasPointFromMouse } from './helpers/geometry.js';
 
-export function createToolController({ canvas, toolState, toolRegistry, context, getVisibleRect }) {
+export function createToolController({
+	canvas,
+	toolState,
+	toolRegistry,
+	context,
+	getVisibleRect,
+	onMutationStart,
+	onMutationEnd
+}) {
 	let activeSession = null;
 	let activeTool = null;
 	const resolveCanvas = () => {
@@ -69,6 +77,18 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		return toolRegistry[toolId] || null;
 	};
 
+	const notifyMutationStart = () => {
+		if (typeof onMutationStart === 'function') {
+			onMutationStart();
+		}
+	};
+
+	const notifyMutationEnd = () => {
+		if (typeof onMutationEnd === 'function') {
+			onMutationEnd();
+		}
+	};
+
 	const onMouseDown = event => {
 		if (event.button !== 0) {
 			return;
@@ -77,6 +97,7 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		if (!activeTool || typeof activeTool.onPointerDown !== 'function') {
 			return;
 		}
+		notifyMutationStart();
 		const point = canvasPointFromMouse(event, resolveCanvas());
 		activeSession = activeTool.onPointerDown({ api, event, point }) || null;
 		document.addEventListener('mousemove', onMouseMove);
@@ -96,6 +117,9 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 			const point = canvasPointFromMouse(event, resolveCanvas());
 			activeTool.onPointerUp({ api, event, point, session: activeSession });
 		}
+		if (activeTool) {
+			notifyMutationEnd();
+		}
 		activeSession = null;
 		activeTool = null;
 		document.removeEventListener('mousemove', onMouseMove);
@@ -107,8 +131,10 @@ export function createToolController({ canvas, toolState, toolRegistry, context,
 		if (!tool || typeof tool.onDoubleClick !== 'function') {
 			return;
 		}
+		notifyMutationStart();
 		const point = canvasPointFromMouse(event, resolveCanvas());
 		tool.onDoubleClick({ api, event, point });
+		notifyMutationEnd();
 	};
 
 	canvas.addEventListener('mousedown', onMouseDown);

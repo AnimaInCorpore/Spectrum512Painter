@@ -46,11 +46,14 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - 21 built-in pattern tiles.
   - Line size slider (`1..8`).
   - Shape mode toggle (`FRAME` / `FILL`).
+- Editing history
+  - Undo/Redo with a fixed history depth of `32` actions.
+  - Menu commands (`Options -> Undo`, `Options -> Redo`) and shortcuts (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`).
 
 ### Not Implemented Yet
 
 - Toolbox icons present but currently no-op: `Zoom`, `Marquee`, `Text`.
-- Many menu entries are placeholders (for example Undo, selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
+- Many menu entries are placeholders (for example selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
 - Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts.
 
 ## Run Locally

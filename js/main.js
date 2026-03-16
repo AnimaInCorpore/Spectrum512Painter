@@ -1,6 +1,7 @@
 import { PATTERN_CLASSES } from './config/patterns.js';
 import { GEM_256_COLORS } from './config/colors.js';
 import { createCanvasDocument } from './canvas/document.js';
+import { createHistoryManager } from './canvas/history.js';
 import { createViewportScroller } from './canvas/viewport.js';
 import { setupFileLoading } from './io/loading.js';
 import { setupFileSaving } from './io/saving.js';
@@ -13,6 +14,7 @@ import { initLineSizeSlider } from './ui/line-size.js';
 import { initPatternPalette } from './ui/patterns.js';
 import { initShapeModeControl } from './ui/shape-mode.js';
 import { initToolSelection } from './ui/tools.js';
+import { initUndoRedoControls } from './ui/undo-redo.js';
 import {
 	createSpectrumCanvas,
 	SPECTRUM_CANVAS_WIDTH,
@@ -45,6 +47,8 @@ const ditherFs75Entry = document.getElementById('menu-color-dither-fs-75');
 const ditherFs50Entry = document.getElementById('menu-color-dither-fs-50');
 const ditherFalseFsEntry = document.getElementById('menu-color-dither-false-fs');
 const bruteForceShaderEntry = document.getElementById('menu-options-bruteforce-shader');
+const undoMenuItem = document.getElementById('menu-options-undo');
+const redoMenuItem = document.getElementById('menu-options-redo');
 
 const targetEntryMap = {
 	st512: target512Entry,
@@ -75,11 +79,82 @@ const BITS_TO_SPECTRUM_TARGET = {
 	4: 'ste4096',
 	5: 'ste32768'
 };
+const MAX_HISTORY_STEPS = 32;
 
 const canvasDocument = createCanvasDocument({
 	canvas,
 	titleElement
 });
+
+function readCanvasBitmapState(sourceCanvas) {
+	if (!sourceCanvas) {
+		return null;
+	}
+	const context = sourceCanvas.getContext('2d');
+	if (!context) {
+		return null;
+	}
+	const imageData = context.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+	return {
+		width: sourceCanvas.width,
+		height: sourceCanvas.height,
+		pixels: new Uint8ClampedArray(imageData.data)
+	};
+}
+
+function getEditableSourceCanvas() {
+	if (spectrum512Enabled) {
+		const session = ensureSpectrumSession();
+		if (session && session.baseCanvas) {
+			return session.baseCanvas;
+		}
+	}
+	return canvas;
+}
+
+function persistBitmapState(state, { invalidateSpectrumSession = false } = {}) {
+	if (!state || !state.pixels) {
+		return;
+	}
+	const fileName = lastLoadedSource && lastLoadedSource.fileName
+		? lastLoadedSource.fileName
+		: 'UNTITLED';
+	const sourceFormat = lastLoadedSource && lastLoadedSource.sourceFormat
+		? lastLoadedSource.sourceFormat
+		: undefined;
+	lastLoadedSource = {
+		type: 'bitmap',
+		bitmap: {
+			width: state.width,
+			height: state.height,
+			pixels: new Uint8ClampedArray(state.pixels)
+		},
+		fileName,
+		...(sourceFormat ? { sourceFormat } : {})
+	};
+	if (invalidateSpectrumSession) {
+		sourceRevision += 1;
+		clearSpectrumSession();
+	}
+}
+
+function captureEditableBitmapState() {
+	return readCanvasBitmapState(getEditableSourceCanvas());
+}
+
+function persistCurrentEditableState(options = {}) {
+	const state = captureEditableBitmapState();
+	persistBitmapState(state, options);
+	return state;
+}
+
+function applyHistoryBitmapState(state) {
+	if (!state) {
+		return;
+	}
+	persistBitmapState(state, { invalidateSpectrumSession: true });
+	renderLoadedSource({ resetScroll: false });
+}
 
 function getSpectrumConversionOptions() {
 	const target = SPECTRUM512_TARGETS[spectrumTarget] || SPECTRUM512_TARGETS.ste4096;
@@ -405,6 +480,7 @@ function initializeDefaultDocument() {
 
 if (spectrumToggleEntry) {
 	spectrumToggleEntry.addEventListener('click', () => {
+		persistCurrentEditableState({ invalidateSpectrumSession: !spectrum512Enabled });
 		spectrum512Enabled = !spectrum512Enabled;
 		updateSpectrumMenuEntries();
 		renderLoadedSource();
@@ -489,12 +565,47 @@ initToolSelection(document, {
 	}
 });
 
+let undoRedoControls = null;
+const historyManager = createHistoryManager({
+	maxEntries: MAX_HISTORY_STEPS,
+	captureState: captureEditableBitmapState,
+	applyState: applyHistoryBitmapState,
+	onChange: () => {
+		if (undoRedoControls) {
+			undoRedoControls.refresh();
+		}
+	}
+});
+
+undoRedoControls = initUndoRedoControls({
+	undoMenuItem,
+	redoMenuItem,
+	onUndo: () => {
+		historyManager.undo();
+	},
+	onRedo: () => {
+		historyManager.redo();
+	},
+	canUndo: () => historyManager.canUndo(),
+	canRedo: () => historyManager.canRedo()
+});
+
 const toolController = createToolController({
 	canvas,
 	toolState,
 	toolRegistry,
 	context: canvasDocument.context,
-	getVisibleRect: () => viewportScroller.getVisibleRect()
+	getVisibleRect: () => viewportScroller.getVisibleRect(),
+	onMutationStart: () => {
+		historyManager.beginTransaction();
+	},
+	onMutationEnd: () => {
+		const { committed, afterState } = historyManager.endTransaction();
+		if (!committed || !afterState) {
+			return;
+		}
+		persistBitmapState(afterState, { invalidateSpectrumSession: !spectrum512Enabled });
+	}
 });
 
 toolController.setCanvasResolver(() => canvas);
@@ -518,6 +629,7 @@ setupFileLoading({
 		sourceRevision += 1;
 		clearSpectrumSession();
 		renderLoadedSource();
+		historyManager.clear();
 	},
 	onBitmapLoaded: ({ width, height, pixels, fileName, sourceFormat, bitsPerColor }) => {
 		if (sourceFormat === 'spu') {
@@ -540,6 +652,7 @@ setupFileLoading({
 		sourceRevision += 1;
 		clearSpectrumSession();
 		renderLoadedSource();
+		historyManager.clear();
 	}
 });
 
@@ -569,6 +682,7 @@ setupFileSaving({
 });
 
 initializeDefaultDocument();
+historyManager.clear();
 
 const aboutOverlay = document.getElementById('about-overlay');
 const aboutMenuItem = document.getElementById('menu-desk-about');

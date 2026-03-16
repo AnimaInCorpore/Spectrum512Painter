@@ -51,6 +51,14 @@ function createCanvas(width, height) {
 	return canvas;
 }
 
+function drawDirectCopy(source, targetWidth, targetHeight) {
+	const result = createCanvas(targetWidth, targetHeight);
+	const context = result.getContext('2d');
+	context.imageSmoothingEnabled = false;
+	context.drawImage(source, 0, 0, targetWidth, targetHeight);
+	return result;
+}
+
 function configureSmoothing(context) {
 	context.imageSmoothingEnabled = true;
 }
@@ -109,6 +117,11 @@ export function createSpectrumCanvas(source, options = {}) {
 	const targetWidth = Math.max(1, options.width || SPECTRUM_CANVAS_WIDTH);
 	const targetHeight = Math.max(1, options.height || SPECTRUM_CANVAS_HEIGHT);
 	const sourceSize = getSourceSize(source);
+
+	if (sourceSize.width === targetWidth && sourceSize.height === targetHeight) {
+		return drawDirectCopy(source, targetWidth, targetHeight);
+	}
+
 	const crop = getSpectrumCropRect(
 		sourceSize.width,
 		sourceSize.height,
