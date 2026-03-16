@@ -152,8 +152,29 @@ function applyHistoryBitmapState(state) {
 	if (!state) {
 		return;
 	}
-	persistBitmapState(state, { invalidateSpectrumSession: true });
+	persistBitmapState(state, { invalidateSpectrumSession: false });
+	if (spectrum512Enabled) {
+		let session = ensureSpectrumSession();
+		if (!session) {
+			sourceRevision += 1;
+			clearSpectrumSession();
+			session = ensureSpectrumSession();
+		}
+		if (session) {
+			if (session.baseCanvas.width !== state.width || session.baseCanvas.height !== state.height) {
+				session.baseCanvas.width = state.width;
+				session.baseCanvas.height = state.height;
+				session.baseContext = session.baseCanvas.getContext('2d');
+				session.drawContext = createSpectrumDrawContextProxy(session);
+			}
+			const imageData = new ImageData(new Uint8ClampedArray(state.pixels), state.width, state.height);
+			session.baseContext.putImageData(imageData, 0, 0);
+		}
+	}
 	renderLoadedSource({ resetScroll: false });
+	if (viewportScroller) {
+		viewportScroller.recalcScrollBounds();
+	}
 }
 
 function getSpectrumConversionOptions() {

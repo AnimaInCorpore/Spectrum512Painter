@@ -43,13 +43,6 @@ function bitmapStatesEqual(left, right) {
 	return true;
 }
 
-function createHistoryEntry(before, after) {
-	return {
-		before: cloneBitmapState(before),
-		after: cloneBitmapState(after)
-	};
-}
-
 function buildSnapshot(undoStack, redoStack) {
 	return {
 		canUndo: undoStack.length > 0,
@@ -99,13 +92,13 @@ export function createHistoryManager({
 			return { committed: false, afterState: after };
 		}
 
-		undoStack.push(createHistoryEntry(before, after));
+		undoStack.push({ before, after });
 		if (undoStack.length > historyLimit) {
 			undoStack = undoStack.slice(undoStack.length - historyLimit);
 		}
 		redoStack = [];
 		emitChange();
-		return { committed: true, afterState: cloneBitmapState(after) };
+		return { committed: true, afterState: after };
 	};
 
 	const cancelTransaction = () => {
@@ -124,7 +117,7 @@ export function createHistoryManager({
 			return false;
 		}
 		const entry = undoStack.pop();
-		applyState(cloneBitmapState(entry.before));
+		applyState(entry.before);
 		redoStack.push(entry);
 		transactionStart = null;
 		emitChange();
@@ -136,7 +129,7 @@ export function createHistoryManager({
 			return false;
 		}
 		const entry = redoStack.pop();
-		applyState(cloneBitmapState(entry.after));
+		applyState(entry.after);
 		undoStack.push(entry);
 		transactionStart = null;
 		emitChange();
