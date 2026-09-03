@@ -55,10 +55,12 @@ jobs:
       # The mirror step below uploads the whole workspace, so anything that must not be
       # published has to be gone before it runs. Deleting these rather than adding an
       # --exclude is deliberate: lftp skips excluded paths entirely, so an exclude would
-      # leave the already-published .git directory sitting on the server, whereas removing
-      # it here lets `mirror --delete` clean it up on the next run.
-      - name: Strip repository metadata from the upload
-        run: rm -rf .git .github .gitignore .gitmodules
+      # leave the already-published copies sitting on the server, whereas removing them
+      # here lets `mirror --delete` clean them up on the next run.
+      # AGENTS.md and doc/ are repository documentation rather than site content, and
+      # nothing in index.html or js/ links to them.
+      - name: Strip non-site files from the upload
+        run: rm -rf .git .github .gitignore .gitmodules AGENTS.md doc
 
       # If you have a build process (e.g., minification), uncomment and configure these lines:
       # - name: Setup Node.js
