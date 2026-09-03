@@ -36,9 +36,11 @@ jobs:
       # touched it makes those timestamps stable between runs, so only genuinely changed
       # files transfer. `--ignore-time` would also stop the churn, but it compares size
       # alone and would silently skip an edit that happens to preserve a file's length.
-      # Must run before the metadata is stripped, since it reads .git.
+      # Must run before the metadata is stripped, since it reads .git. The package installs
+      # into /usr/lib/git-core, which is git's exec path rather than PATH, so it is only
+      # reachable as a git subcommand.
       - name: Restore file timestamps from git history
-        run: git-restore-mtime --skip-missing
+        run: git restore-mtime --skip-missing
 
       # The mirror step below uploads the whole workspace, so anything that must not be
       # published has to be gone before it runs. Deleting these rather than adding an
