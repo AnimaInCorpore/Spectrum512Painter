@@ -1,12 +1,12 @@
 # Spectrum 512 Painter
 
-A classic GEM-style paint program for Atari ST workflows, implemented with HTML5 Canvas/WebGL and ES modules.
+A classic GEM-style paint program for Atari ST workflows, implemented with HTML5 Canvas and ES modules.
 
 Try it online: [https://painter.anides.de/](https://painter.anides.de/)
 
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
-## Current State (March 16, 2026)
+## Current State (September 3, 2026)
 
 The project is actively usable for painting and Spectrum 512 conversion work.
 
@@ -26,6 +26,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
   - Optimizer toggle: `Options -> Brute-Force On/Off` (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
+  - The Floyd-Steinberg presets carry quantization error downwards, so an edit reconverts every line below it. Checks dithers each pixel independently and repaints only the edited lines, which makes it the faster mode to paint in.
 - Canvas and viewport
   - Default document is a white `320x200` canvas.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
