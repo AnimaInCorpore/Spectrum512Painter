@@ -27,6 +27,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq lftp
 
+      # The mirror step below uploads the whole workspace, so anything that must not be
+      # published has to be gone before it runs. Deleting these rather than adding an
+      # --exclude is deliberate: lftp skips excluded paths entirely, so an exclude would
+      # leave the already-published .git directory sitting on the server, whereas removing
+      # it here lets `mirror --delete` clean it up on the next run.
+      - name: Strip repository metadata from the upload
+        run: rm -rf .git .github .gitignore .gitmodules
+
       # If you have a build process (e.g., minification), uncomment and configure these lines:
       # - name: Setup Node.js
       #   uses: actions/setup-node@v4
