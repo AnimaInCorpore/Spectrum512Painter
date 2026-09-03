@@ -192,25 +192,6 @@ function getSpectrumConversionOptions() {
 	};
 }
 
-function getErrorDiffusionDirtyTailRows() {
-	const ditherPreset = FLOYD_STEINBERG_DITHER_PRESETS[spectrumDither] || FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg;
-	if (ditherPreset.mode !== 'errorDiffusion' || !Array.isArray(ditherPreset.pattern)) {
-		return 0;
-	}
-
-	for (let i = 10; i <= 14; i += 1) {
-		if ((ditherPreset.pattern[i] || 0) !== 0) {
-			return 2;
-		}
-	}
-	for (let i = 5; i <= 9; i += 1) {
-		if ((ditherPreset.pattern[i] || 0) !== 0) {
-			return 1;
-		}
-	}
-	return 0;
-}
-
 function setMenuChoiceText(entry, label, selected) {
 	if (!entry) {
 		return;
@@ -377,15 +358,15 @@ function createSpectrumDrawContextProxy(session) {
 
 	proxy.createImageData = (...args) => baseContext.createImageData(...args);
 	proxy.getImageData = (...args) => baseContext.getImageData(...args);
+	// convertSpectrum512Lines extends the range down to the last line by itself when the
+	// dither mode diffuses error across lines, so only the edited rows are reported here.
 	proxy.putImageData = (imageData, x, y) => {
 		baseContext.putImageData(imageData, x, y);
-		const tailRows = session.isPassthrough ? 0 : getErrorDiffusionDirtyTailRows();
-		scheduleSpectrumDirtyConversion(session, y, y + imageData.height - 1 + tailRows);
+		scheduleSpectrumDirtyConversion(session, y, y + imageData.height - 1);
 	};
 	proxy.fillRect = (x, y, width, height) => {
 		baseContext.fillRect(x, y, width, height);
-		const tailRows = session.isPassthrough ? 0 : getErrorDiffusionDirtyTailRows();
-		scheduleSpectrumDirtyConversion(session, y, y + height - 1 + tailRows);
+		scheduleSpectrumDirtyConversion(session, y, y + height - 1);
 	};
 
 	return proxy;

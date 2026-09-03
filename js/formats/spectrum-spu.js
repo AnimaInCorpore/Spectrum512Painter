@@ -1,6 +1,5 @@
 import { createSpectrumCanvas, SPECTRUM_CANVAS_HEIGHT, SPECTRUM_CANVAS_WIDTH } from '../imaging/spectrum.js';
 import {
-	computeSpectrum512LineColorSlots,
 	convertSpectrum512Lines,
 	getSpectrum512ColorSlotIndex
 } from '../imaging/spectrum512.js';
@@ -256,16 +255,11 @@ export function encodeSpectrumSpu({
 	}
 
 	const convertedCanvas = createCanvasClone(spectrumSource);
-	convertSpectrum512Lines({
+	const lineSlots = convertSpectrum512Lines({
 		sourceCanvas: spectrumSource,
 		targetCanvas: convertedCanvas,
 		yStart: 0,
 		yEnd: SPECTRUM_CANVAS_HEIGHT - 1,
-		options: { bitsPerColor, ditherMode, ditherPattern, optimizerMode }
-	});
-
-	const lineSlots = computeSpectrum512LineColorSlots({
-		sourceCanvas: spectrumSource,
 		options: { bitsPerColor, ditherMode, ditherPattern, optimizerMode }
 	});
 

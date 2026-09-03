@@ -1,6 +1,4 @@
-import { RemapSpectrum512Image7 } from '../vendor/jscolorquantizer/quantizers/spectrum512.js';
 import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
-import { createSpectrumCanvas } from './spectrum.js';
 import { optimizeSpectrum512LineSlotsBruteForceBatch } from './spectrum512-bruteforce-webgl.js';
 
 const DITHER_MODE_ERROR_DIFFUSION = 'errorDiffusion';
@@ -53,7 +51,13 @@ export const FLOYD_STEINBERG_DITHER_PRESETS = {
 };
 
 const DEFAULT_BITS_PER_COLOR = SPECTRUM512_TARGETS.ste4096.bitsPerColor;
+const MIN_BITS_PER_COLOR = 1;
+const MAX_BITS_PER_COLOR = 8;
 const DEFAULT_DITHER_PATTERN = FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg.pattern;
+const SLOT_COUNT = 48;
+const LOGICAL_COLOR_COUNT = 16;
+const BACKGROUND_SLOT_INDEX = 0;
+const RESERVED_BACKGROUND_SLOT_INDEX = 32;
 const ERROR_DIFFUSION_NEIGHBORS = [
 	{ patternIndex: 3, dx: 1, dy: 0 },
 	{ patternIndex: 4, dx: 2, dy: 0 },
@@ -69,22 +73,44 @@ const ERROR_DIFFUSION_NEIGHBORS = [
 	{ patternIndex: 14, dx: 2, dy: 2 }
 ];
 
+function getOklabChroma(oklab) {
+	return Math.sqrt(oklab[1] * oklab[1] + oklab[2] * oklab[2]);
+}
+
+const BLACK_OKLAB = rgbToOklab([0, 0, 0]);
+const BLACK_OKLAB_CHROMA = getOklabChroma(BLACK_OKLAB);
+
 function resolveDitherOptions(options) {
-	const mode = options.ditherMode === DITHER_MODE_CHECKS
-		? DITHER_MODE_CHECKS
-		: DITHER_MODE_ERROR_DIFFUSION;
-	const pattern = mode === DITHER_MODE_ERROR_DIFFUSION
-		&& Array.isArray(options.ditherPattern)
-		&& options.ditherPattern.length > 0
-		? options.ditherPattern
-		: (mode === DITHER_MODE_ERROR_DIFFUSION ? DEFAULT_DITHER_PATTERN : null);
-	return { mode, pattern };
+	if (options.ditherMode === DITHER_MODE_CHECKS) {
+		return { mode: DITHER_MODE_CHECKS, pattern: null };
+	}
+	const hasPattern = Array.isArray(options.ditherPattern) && options.ditherPattern.length > 0;
+	return {
+		mode: DITHER_MODE_ERROR_DIFFUSION,
+		pattern: hasPattern ? options.ditherPattern : DEFAULT_DITHER_PATTERN
+	};
 }
 
 function resolveOptimizerMode(options) {
 	return options.optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
 		? OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
 		: OPTIMIZER_MODE_GREEDY;
+}
+
+function resolveBitsPerColor(options) {
+	if (!Number.isFinite(options.bitsPerColor)) {
+		return DEFAULT_BITS_PER_COLOR;
+	}
+	return Math.max(
+		MIN_BITS_PER_COLOR,
+		Math.min(MAX_BITS_PER_COLOR, Math.floor(options.bitsPerColor))
+	);
+}
+
+function createQuantizationScale(bitsPerColor) {
+	const shadesPerColor = 1 << bitsPerColor;
+	const shadesScale = (shadesPerColor - 1) / 255;
+	return { shadesScale, inverseShadesScale: 1 / shadesScale };
 }
 
 export function getSpectrum512ColorSlotIndex(x, colorIndex) {
@@ -119,25 +145,34 @@ function quantizeChannel(value, shadesScale, inverseShadesScale) {
 	return Math.round(Math.round(value * shadesScale) * inverseShadesScale);
 }
 
-function getOklabChroma(oklab) {
-	return Math.sqrt(oklab[1] * oklab[1] + oklab[2] * oklab[2]);
+function setColorAppearance(color) {
+	color.oklab = rgbToOklab([color.red, color.green, color.blue]);
+	color.chroma = getOklabChroma(color.oklab);
+	return color;
+}
+
+function copyColorInto(target, source) {
+	target.red = source.red;
+	target.green = source.green;
+	target.blue = source.blue;
+	target.oklab = source.oklab;
+	target.chroma = source.chroma;
+	target.count = source.count;
 }
 
 function createColorSlots() {
-	const slots = [];
-	for (let i = 0; i < 48; i += 1) {
-		const red = 0;
-		const green = 0;
-		const blue = 0;
-		const count = (i === 0 || i === 32) ? 2 : 0;
-		slots.push({
-			red,
-			green,
-			blue,
-			oklab: rgbToOklab([red, green, blue]),
-			count,
+	const slots = new Array(SLOT_COUNT);
+	for (let i = 0; i < SLOT_COUNT; i += 1) {
+		const isReserved = i === BACKGROUND_SLOT_INDEX || i === RESERVED_BACKGROUND_SLOT_INDEX;
+		slots[i] = {
+			red: 0,
+			green: 0,
+			blue: 0,
+			oklab: BLACK_OKLAB,
+			chroma: BLACK_OKLAB_CHROMA,
+			count: isReserved ? 2 : 0,
 			slotIndex: i
-		});
+		};
 	}
 	return slots;
 }
@@ -150,8 +185,8 @@ function mergeColors(colorA, colorB) {
 	colorA.red = Math.round((colorA.red * weightA + colorB.red * weightB) / total);
 	colorA.green = Math.round((colorA.green * weightA + colorB.green * weightB) / total);
 	colorA.blue = Math.round((colorA.blue * weightA + colorB.blue * weightB) / total);
-	colorA.oklab = rgbToOklab([colorA.red, colorA.green, colorA.blue]);
 	colorA.count = total;
+	setColorAppearance(colorA);
 }
 
 function diffuseErrorToNeighbor({
@@ -264,9 +299,22 @@ function buildErrorDiffusionIntermediateImage(
 	return intermediateData;
 }
 
-function compareChecksColorsByLightness(colorA, colorB) {
-	const lightnessA = rgbToOklab([colorA.red, colorA.green, colorA.blue])[0];
-	const lightnessB = rgbToOklab([colorB.red, colorB.green, colorB.blue])[0];
+function createOklabLightnessCache() {
+	const cache = new Map();
+	return (red, green, blue) => {
+		const key = (red << 16) | (green << 8) | blue;
+		let lightness = cache.get(key);
+		if (lightness === undefined) {
+			lightness = rgbToOklab([red, green, blue])[0];
+			cache.set(key, lightness);
+		}
+		return lightness;
+	};
+}
+
+function compareChecksColorsByLightness(colorA, colorB, getLightness) {
+	const lightnessA = getLightness(colorA.red, colorA.green, colorA.blue);
+	const lightnessB = getLightness(colorB.red, colorB.green, colorB.blue);
 	if (lightnessA !== lightnessB) {
 		return lightnessA - lightnessB;
 	}
@@ -279,10 +327,10 @@ function compareChecksColorsByLightness(colorA, colorB) {
 	return colorA.blue - colorB.blue;
 }
 
-function pickChecksColorByParity(baseColor, secondColor, x, y) {
+function pickChecksColorByParity(baseColor, secondColor, x, y, getLightness) {
 	let darker = baseColor;
 	let lighter = secondColor;
-	if (compareChecksColorsByLightness(darker, lighter) > 0) {
+	if (compareChecksColorsByLightness(darker, lighter, getLightness) > 0) {
 		darker = secondColor;
 		lighter = baseColor;
 	}
@@ -294,6 +342,7 @@ function pickChecksColorByParity(baseColor, secondColor, x, y) {
 
 function buildChecksIntermediateImage(sourceData, width, height, shadesScale, inverseShadesScale) {
 	const intermediateData = new Float32Array(sourceData.length);
+	const getLightness = createOklabLightnessCache();
 
 	for (let y = 0; y < height; y += 1) {
 		for (let x = 0; x < width; x += 1) {
@@ -327,7 +376,8 @@ function buildChecksIntermediateImage(sourceData, width, height, shadesScale, in
 				{ red: baseRed, green: baseGreen, blue: baseBlue },
 				{ red: secondRed, green: secondGreen, blue: secondBlue },
 				x,
-				y
+				y,
+				getLightness
 			);
 			intermediateData[pixelIndex] = selected.red;
 			intermediateData[pixelIndex + 1] = selected.green;
@@ -368,6 +418,60 @@ function getIntermediateLine(intermediateData, width, y) {
 	return line;
 }
 
+function findClosestColorPairToMerge(colors) {
+	let bestScore = Number.MAX_VALUE;
+	let bestA = null;
+	let bestB = null;
+
+	for (let indexA = 0; indexA < colors.length - 1; indexA += 1) {
+		const colorA = colors[indexA];
+		if (colorA.slotIndex === RESERVED_BACKGROUND_SLOT_INDEX) {
+			continue;
+		}
+
+		for (let indexB = indexA + 1; indexB < colors.length; indexB += 1) {
+			const colorB = colors[indexB];
+			if (colorB.slotIndex === RESERVED_BACKGROUND_SLOT_INDEX) {
+				continue;
+			}
+
+			const distance = OklabDistance(colorA.oklab, colorB.oklab);
+			const lightnessGap = Math.abs(colorA.oklab[0] - colorB.oklab[0]);
+			const chromaGap = Math.abs(colorA.chroma - colorB.chroma);
+			const score = distance * (colorA.count + colorB.count) * (1 + lightnessGap) * (1 + chromaGap);
+
+			if (score < bestScore) {
+				bestScore = score;
+				bestA = colorA;
+				bestB = colorB;
+			}
+		}
+	}
+
+	return { bestA, bestB };
+}
+
+function makeRoomForPixelColor(colors) {
+	const { bestA, bestB } = findClosestColorPairToMerge(colors);
+	if (!bestA || !bestB) {
+		return;
+	}
+
+	if (bestA === colors[0]) {
+		mergeColors(bestB, bestA);
+		return;
+	}
+
+	if (bestA.slotIndex < bestB.slotIndex) {
+		mergeColors(bestA, bestB);
+		copyColorInto(bestB, colors[0]);
+		return;
+	}
+
+	mergeColors(bestB, bestA);
+	copyColorInto(bestA, colors[0]);
+}
+
 function fillLineColorSlots(lineData, width, colorSlots) {
 	for (let x = 0; x < width; x += 1) {
 		const pixelIndex = x * 4;
@@ -379,77 +483,26 @@ function fillLineColorSlots(lineData, width, colorSlots) {
 		const red = clampColor(lineData[pixelIndex]);
 		const green = clampColor(lineData[pixelIndex + 1]);
 		const blue = clampColor(lineData[pixelIndex + 2]);
-		const pixelOklab = rgbToOklab([red, green, blue]);
 
-		const colors = [{ red, green, blue, oklab: pixelOklab, count: 1 }];
+		const pixelColor = setColorAppearance({ red, green, blue, count: 1 });
+		const colors = [pixelColor];
 		let colorIndex = 0;
 
-		for (; colorIndex < 16; colorIndex += 1) {
+		for (; colorIndex < LOGICAL_COLOR_COUNT; colorIndex += 1) {
 			const spectrumColor = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
 			if (spectrumColor.red === red && spectrumColor.green === green && spectrumColor.blue === blue) {
 				spectrumColor.count += 1;
 				break;
 			}
 			if (spectrumColor.count === 0) {
-				spectrumColor.red = red;
-				spectrumColor.green = green;
-				spectrumColor.blue = blue;
-				spectrumColor.oklab = pixelOklab;
-				spectrumColor.count = 1;
+				copyColorInto(spectrumColor, pixelColor);
 				break;
 			}
 			colors.push(spectrumColor);
 		}
 
-		if (colorIndex < 16) {
-			continue;
-		}
-
-		let bestScore = Number.MAX_VALUE;
-		let bestA = null;
-		let bestB = null;
-
-		for (let indexA = 0; indexA < colors.length - 1; indexA += 1) {
-			for (let indexB = indexA + 1; indexB < colors.length; indexB += 1) {
-				const colorA = colors[indexA];
-				const colorB = colors[indexB];
-				if (colorA.slotIndex === 32 || colorB.slotIndex === 32) {
-					continue;
-				}
-
-				const distance = OklabDistance(colorA.oklab, colorB.oklab);
-				const lightnessGap = Math.abs(colorA.oklab[0] - colorB.oklab[0]);
-				const chromaGap = Math.abs(getOklabChroma(colorA.oklab) - getOklabChroma(colorB.oklab));
-				const score = distance * (colorA.count + colorB.count) * (1 + lightnessGap) * (1 + chromaGap);
-
-				if (score < bestScore) {
-					bestScore = score;
-					bestA = colorA;
-					bestB = colorB;
-				}
-			}
-		}
-
-		if (!bestA || !bestB) {
-			continue;
-		}
-
-		if (bestA === colors[0]) {
-			mergeColors(bestB, bestA);
-		} else if (bestA.slotIndex < bestB.slotIndex) {
-			mergeColors(bestA, bestB);
-			bestB.red = colors[0].red;
-			bestB.green = colors[0].green;
-			bestB.blue = colors[0].blue;
-			bestB.oklab = colors[0].oklab;
-			bestB.count = colors[0].count;
-		} else {
-			mergeColors(bestB, bestA);
-			bestA.red = colors[0].red;
-			bestA.green = colors[0].green;
-			bestA.blue = colors[0].blue;
-			bestA.oklab = colors[0].oklab;
-			bestA.count = colors[0].count;
+		if (colorIndex === LOGICAL_COLOR_COUNT) {
+			makeRoomForPixelColor(colors);
 		}
 	}
 }
@@ -460,7 +513,7 @@ function quantizeSlots(colorSlots, shadesScale, inverseShadesScale) {
 		slot.red = quantizeChannel(slot.red, shadesScale, inverseShadesScale);
 		slot.green = quantizeChannel(slot.green, shadesScale, inverseShadesScale);
 		slot.blue = quantizeChannel(slot.blue, shadesScale, inverseShadesScale);
-		slot.oklab = rgbToOklab([slot.red, slot.green, slot.blue]);
+		setColorAppearance(slot);
 	}
 }
 
@@ -469,14 +522,11 @@ function applyOptimizedSlotsToColorSlots(colorSlots, optimizedSlots) {
 		return;
 	}
 	for (let i = 0; i < colorSlots.length; i += 1) {
-		colorSlots[i].red = optimizedSlots[i].red;
-		colorSlots[i].green = optimizedSlots[i].green;
-		colorSlots[i].blue = optimizedSlots[i].blue;
-		colorSlots[i].oklab = rgbToOklab([
-			colorSlots[i].red,
-			colorSlots[i].green,
-			colorSlots[i].blue
-		]);
+		const slot = colorSlots[i];
+		slot.red = optimizedSlots[i].red;
+		slot.green = optimizedSlots[i].green;
+		slot.blue = optimizedSlots[i].blue;
+		setColorAppearance(slot);
 	}
 }
 
@@ -541,38 +591,26 @@ function applyBruteForceOptimizationToEntries({ entries, width, bitsPerColor }) 
 	}
 }
 
-function getLineSlotsAtX(colorSlots, x) {
-	const slots = new Array(16);
-	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
-		slots[colorIndex] = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
-	}
-	return slots;
-}
-
-function updateLineSlotsAtX(lineSlots, colorSlots, x) {
-	for (let colorIndex = 0; colorIndex < 16; colorIndex += 1) {
-		const slot = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
-		if (lineSlots[colorIndex] === slot) {
-			continue;
-		}
-		lineSlots[colorIndex] = slot;
+function fillLineSlotsAtX(lineSlots, colorSlots, x) {
+	for (let colorIndex = 0; colorIndex < LOGICAL_COLOR_COUNT; colorIndex += 1) {
+		lineSlots[colorIndex] = colorSlots[getSpectrum512ColorSlotIndex(x, colorIndex)];
 	}
 }
 
-function findClosestSlotMatch(pixelOklab, lineSlots) {
+function findClosestSlot(pixelOklab, lineSlots) {
 	let closestDistance = Number.MAX_VALUE;
-	let slot = null;
+	let closestSlot = null;
 
 	for (let i = 0; i < lineSlots.length; i += 1) {
 		const candidate = lineSlots[i];
 		const distance = OklabDistance(pixelOklab, candidate.oklab);
 		if (distance < closestDistance) {
 			closestDistance = distance;
-			slot = candidate;
+			closestSlot = candidate;
 		}
 	}
 
-	return { slot, distance: closestDistance };
+	return closestSlot;
 }
 
 function remapLine(
@@ -582,31 +620,27 @@ function remapLine(
 	y,
 	colorSlots
 ) {
-	const lineSlots = getLineSlotsAtX(colorSlots, 0);
+	const lineSlots = new Array(LOGICAL_COLOR_COUNT);
 
 	for (let x = 0; x < width; x += 1) {
-		if (x > 0) {
-			updateLineSlotsAtX(lineSlots, colorSlots, x);
-		}
-
 		const lineIndex = x * 4;
-		const pixelIndex = (x + y * width) * 4;
 		const alpha = lineData[lineIndex + 3];
 		if (alpha !== 255) {
 			continue;
 		}
 
+		fillLineSlotsAtX(lineSlots, colorSlots, x);
+
 		const red = clampColor(lineData[lineIndex]);
 		const green = clampColor(lineData[lineIndex + 1]);
 		const blue = clampColor(lineData[lineIndex + 2]);
-		const pixelOklab = rgbToOklab([red, green, blue]);
-		const closestSlotMatch = findClosestSlotMatch(pixelOklab, lineSlots);
-		const remapped = closestSlotMatch.slot;
+		const remapped = findClosestSlot(rgbToOklab([red, green, blue]), lineSlots);
 
 		if (!remapped) {
 			continue;
 		}
 
+		const pixelIndex = (x + y * width) * 4;
 		targetData[pixelIndex] = remapped.red;
 		targetData[pixelIndex + 1] = remapped.green;
 		targetData[pixelIndex + 2] = remapped.blue;
@@ -614,120 +648,54 @@ function remapLine(
 	}
 }
 
-export function computeSpectrum512LineColorSlots({ sourceCanvas, options = {} }) {
+function clampLineIndex(value, fallback, lastLine) {
+	if (value == null) {
+		return fallback;
+	}
+	const index = Math.floor(value);
+	if (!Number.isFinite(index)) {
+		return fallback;
+	}
+	if (index < 0) {
+		return 0;
+	}
+	if (index > lastLine) {
+		return lastLine;
+	}
+	return index;
+}
+
+function resolveLineRange(yStart, yEnd, height, ditherOptions) {
+	const lastLine = height - 1;
+	const startY = clampLineIndex(yStart, 0, lastLine);
+
+	// Error diffusion pushes quantization error onto the next two lines, and each of those
+	// lines then re-diffuses its own error. A change on one line therefore reaches every
+	// line below it, so anything short of a repaint to the bottom leaves stale pixels.
+	if (ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION) {
+		return { startY, endY: lastLine };
+	}
+
+	return { startY, endY: Math.max(startY, clampLineIndex(yEnd, lastLine, lastLine)) };
+}
+
+function prepareSpectrum512Lines({ sourceCanvas, yStart, yEnd, options }) {
 	if (!sourceCanvas) {
-		return [];
+		return null;
 	}
 	const width = sourceCanvas.width;
 	const height = sourceCanvas.height;
 	if (width < 1 || height < 1) {
-		return [];
+		return null;
 	}
 
-	const bitsPerColor = Number.isFinite(options.bitsPerColor)
-		? options.bitsPerColor
-		: DEFAULT_BITS_PER_COLOR;
+	const bitsPerColor = resolveBitsPerColor(options);
 	const ditherOptions = resolveDitherOptions(options);
-	const optimizerMode = resolveOptimizerMode(options);
-	const shadesPerColor = 1 << bitsPerColor;
-	const shadesScale = (shadesPerColor - 1) / 255;
-	const inverseShadesScale = 1 / shadesScale;
+	const { shadesScale, inverseShadesScale } = createQuantizationScale(bitsPerColor);
+	const { startY, endY } = resolveLineRange(yStart, yEnd, height, ditherOptions);
 
 	const sourceContext = sourceCanvas.getContext('2d');
-	const sourceImage = sourceContext.getImageData(0, 0, width, height);
-	const sourceData = sourceImage.data;
-	const intermediateData = buildSecondIntermediateImage(
-		sourceData,
-		width,
-		height,
-		shadesScale,
-		inverseShadesScale,
-		ditherOptions
-	);
-	const entries = createLineProcessingEntries({
-		intermediateData,
-		width,
-		yStart: 0,
-		yEnd: height - 1,
-		shadesScale,
-		inverseShadesScale
-	});
-	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
-		applyBruteForceOptimizationToEntries({
-			entries,
-			width,
-			bitsPerColor
-		});
-	}
-
-	const lines = new Array(height);
-	for (let i = 0; i < entries.length; i += 1) {
-		const entry = entries[i];
-		lines[entry.y] = entry.colorSlots.map(slot => ({
-			red: slot.red,
-			green: slot.green,
-			blue: slot.blue
-		}));
-	}
-
-	return lines;
-}
-
-function cloneCanvas(sourceCanvas) {
-	const canvas = document.createElement('canvas');
-	canvas.width = sourceCanvas.width;
-	canvas.height = sourceCanvas.height;
-	canvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
-	return canvas;
-}
-
-export function createSpectrum512ConvertedCanvas(source, options = {}) {
-	const resizedCanvas = createSpectrumCanvas(source);
-	const convertedCanvas = cloneCanvas(resizedCanvas);
-	convertSpectrum512Lines({
-		sourceCanvas: resizedCanvas,
-		targetCanvas: convertedCanvas,
-		yStart: 0,
-		yEnd: resizedCanvas.height - 1,
-		options
-	});
-	return convertedCanvas;
-}
-
-export function convertSpectrum512Lines({
-	sourceCanvas,
-	targetCanvas,
-	yStart = 0,
-	yEnd = null,
-	options = {}
-}) {
-	if (!sourceCanvas || !targetCanvas) {
-		return;
-	}
-	const width = sourceCanvas.width;
-	const height = sourceCanvas.height;
-	if (width < 1 || height < 1) {
-		return;
-	}
-
-	const bitsPerColor = Number.isFinite(options.bitsPerColor)
-		? options.bitsPerColor
-		: DEFAULT_BITS_PER_COLOR;
-	const ditherOptions = resolveDitherOptions(options);
-	const optimizerMode = resolveOptimizerMode(options);
-	const shadesPerColor = 1 << bitsPerColor;
-	const shadesScale = (shadesPerColor - 1) / 255;
-	const inverseShadesScale = 1 / shadesScale;
-
-	const startY = Math.max(0, Math.min(height - 1, Math.floor(yStart)));
-	const endY = Math.max(startY, Math.min(height - 1, Math.floor(yEnd == null ? height - 1 : yEnd)));
-
-	const sourceContext = sourceCanvas.getContext('2d');
-	const targetContext = targetCanvas.getContext('2d');
-	const sourceImage = sourceContext.getImageData(0, 0, width, height);
-	const targetImage = targetContext.getImageData(0, 0, width, height);
-	const sourceData = sourceImage.data;
-	const targetData = targetImage.data;
+	const sourceData = sourceContext.getImageData(0, 0, width, height).data;
 	const intermediateData = buildSecondIntermediateImage(
 		sourceData,
 		width,
@@ -744,7 +712,8 @@ export function convertSpectrum512Lines({
 		shadesScale,
 		inverseShadesScale
 	});
-	if (optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
+
+	if (resolveOptimizerMode(options) === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
 		applyBruteForceOptimizationToEntries({
 			entries,
 			width,
@@ -752,34 +721,59 @@ export function convertSpectrum512Lines({
 		});
 	}
 
+	return { width, height, entries };
+}
+
+function collectLineColorSlots({ height, entries }) {
+	const lines = new Array(height);
 	for (let i = 0; i < entries.length; i += 1) {
 		const entry = entries[i];
+		lines[entry.y] = entry.colorSlots.map(slot => ({
+			red: slot.red,
+			green: slot.green,
+			blue: slot.blue
+		}));
+	}
+	return lines;
+}
+
+/**
+ * Converts the requested line range of `sourceCanvas` into `targetCanvas` and returns the
+ * 48 Spectrum color slots per converted line, indexed by line number. Lines outside the
+ * converted range are left empty. Error diffusion modes always convert down to the last
+ * line regardless of `yEnd`, because their dither state cascades downwards.
+ */
+export function convertSpectrum512Lines({
+	sourceCanvas,
+	targetCanvas,
+	yStart = 0,
+	yEnd = null,
+	options = {}
+}) {
+	if (!targetCanvas) {
+		return [];
+	}
+	const prepared = prepareSpectrum512Lines({ sourceCanvas, yStart, yEnd, options });
+	if (!prepared) {
+		return [];
+	}
+
+	const targetContext = targetCanvas.getContext('2d');
+	const targetImage = targetContext.getImageData(0, 0, prepared.width, prepared.height);
+	const targetData = targetImage.data;
+
+	for (let i = 0; i < prepared.entries.length; i += 1) {
+		const entry = prepared.entries[i];
 		remapLine(
 			entry.lineData,
 			targetData,
-			width,
+			prepared.width,
 			entry.y,
 			entry.colorSlots
 		);
 	}
 
 	targetContext.putImageData(targetImage, 0, 0);
-}
 
-export function createSpectrum512ReferenceCanvas(source, options = {}) {
-	const bitsPerColor = Number.isFinite(options.bitsPerColor)
-		? options.bitsPerColor
-		: DEFAULT_BITS_PER_COLOR;
-	const ditherOptions = resolveDitherOptions(options);
-
-	const resizedCanvas = createSpectrumCanvas(source);
-	const convertedCanvas = cloneCanvas(resizedCanvas);
-	const imageInfos = {};
-	RemapSpectrum512Image7(
-		convertedCanvas,
-		imageInfos,
-		bitsPerColor,
-		ditherOptions.mode === DITHER_MODE_ERROR_DIFFUSION ? ditherOptions.pattern : null
-	);
-	return convertedCanvas;
+	return collectLineColorSlots(prepared);
 }
