@@ -1,0 +1,5 @@
+# index.html was committed with a mix of CRLF and LF endings, so any tool that rewrote
+# the file uniformly turned a one-line change into a whole-file diff. Marking it as text
+# makes git normalise it to LF on commit, so it no longer matters which ending an editor
+# or script writes in the working tree.
+index.html text
