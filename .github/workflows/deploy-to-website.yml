@@ -28,7 +28,7 @@ jobs:
       - name: Install deploy tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq lftp git-restore-mtime
+          sudo apt-get install -y -qq lftp
 
       # git does not record mtimes, so a fresh checkout stamps every file with the time of
       # the run. `mirror` compares size and mtime, so without this every deploy re-uploads
@@ -36,11 +36,21 @@ jobs:
       # touched it makes those timestamps stable between runs, so only genuinely changed
       # files transfer. `--ignore-time` would also stop the churn, but it compares size
       # alone and would silently skip an edit that happens to preserve a file's length.
-      # Must run before the metadata is stripped, since it reads .git. The package installs
-      # into /usr/lib/git-core, which is git's exec path rather than PATH, so it is only
-      # reachable as a git subcommand.
+      # Must run before the metadata is stripped, since it reads .git. Done inline rather
+      # than with the git-restore-mtime package: that version drives `git whatchanged`,
+      # which git 2.55 refuses to run, and it reports the failure only as a per-file
+      # warning while still exiting 0 - so it silently sets no timestamps at all.
       - name: Restore file timestamps from git history
-        run: git restore-mtime --skip-missing
+        run: |
+          restored=0
+          while IFS= read -r -d '' file; do
+            stamp=$(git log -1 --format=%cI -- "$file")
+            if [ -n "$stamp" ] && [ -f "$file" ]; then
+              touch -d "$stamp" "$file"
+              restored=$((restored + 1))
+            fi
+          done < <(git ls-files -z)
+          echo "restored mtimes on $restored files"
 
       # The mirror step below uploads the whole workspace, so anything that must not be
       # published has to be gone before it runs. Deleting these rather than adding an
