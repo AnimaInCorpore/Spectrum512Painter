@@ -1,8 +1,6 @@
 import { createSpectrumCanvas, SPECTRUM_CANVAS_HEIGHT, SPECTRUM_CANVAS_WIDTH } from '../imaging/spectrum.js';
-import {
-	convertSpectrum512Lines,
-	getSpectrum512ColorSlotIndex
-} from '../imaging/spectrum512.js';
+import { convertSpectrum512Lines } from '../imaging/spectrum512.js';
+import { getSpectrum512ColorSlotIndex } from '../imaging/spectrum512-slots.js';
 
 const SPU_GRAPHICS_BYTES = (SPECTRUM_CANVAS_WIDTH * SPECTRUM_CANVAS_HEIGHT) / 2;
 const SPU_PALETTE_BYTES = 48 * 2 * (SPECTRUM_CANVAS_HEIGHT - 1);

@@ -25,7 +25,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - Toggle: `Color -> Spectrum 512 On/Off`.
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
-  - Optimizer toggle: `Options -> Brute-Force Shader On/Off` (WebGL2 path with CPU fallback when unavailable).
+  - Optimizer toggle: `Options -> Brute-Force On/Off` (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
 - Canvas and viewport
   - Default document is a white `320x200` canvas.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).

@@ -1,14 +1,20 @@
 import { OklabDistance, rgbToOklab } from '../vendor/jscolorquantizer/quantizers/core.js';
-import { optimizeSpectrum512LineSlotsBruteForceBatch } from './spectrum512-bruteforce-webgl.js';
+import { optimizeSpectrum512LineSlotsBruteForceBatch } from './spectrum512-bruteforce.js';
+import {
+	LOGICAL_COLOR_COUNT,
+	SLOT_COUNT,
+	clampColor,
+	getSpectrum512ColorSlotIndex
+} from './spectrum512-slots.js';
 
 const DITHER_MODE_ERROR_DIFFUSION = 'errorDiffusion';
 const DITHER_MODE_CHECKS = 'checks';
 const OPTIMIZER_MODE_GREEDY = 'greedy';
-const OPTIMIZER_MODE_BRUTE_FORCE_WEBGL = 'bruteForceWebgl';
+const OPTIMIZER_MODE_BRUTE_FORCE = 'bruteForce';
 
 export const SPECTRUM512_OPTIMIZER_MODES = {
 	greedy: OPTIMIZER_MODE_GREEDY,
-	bruteForceWebgl: OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
+	bruteForce: OPTIMIZER_MODE_BRUTE_FORCE
 };
 
 export const SPECTRUM512_TARGETS = {
@@ -54,8 +60,6 @@ const DEFAULT_BITS_PER_COLOR = SPECTRUM512_TARGETS.ste4096.bitsPerColor;
 const MIN_BITS_PER_COLOR = 1;
 const MAX_BITS_PER_COLOR = 8;
 const DEFAULT_DITHER_PATTERN = FLOYD_STEINBERG_DITHER_PRESETS.floydSteinberg.pattern;
-const SLOT_COUNT = 48;
-const LOGICAL_COLOR_COUNT = 16;
 const BACKGROUND_SLOT_INDEX = 0;
 const RESERVED_BACKGROUND_SLOT_INDEX = 32;
 const ERROR_DIFFUSION_NEIGHBORS = [
@@ -92,8 +96,8 @@ function resolveDitherOptions(options) {
 }
 
 function resolveOptimizerMode(options) {
-	return options.optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
-		? OPTIMIZER_MODE_BRUTE_FORCE_WEBGL
+	return options.optimizerMode === OPTIMIZER_MODE_BRUTE_FORCE
+		? OPTIMIZER_MODE_BRUTE_FORCE
 		: OPTIMIZER_MODE_GREEDY;
 }
 
@@ -111,34 +115,6 @@ function createQuantizationScale(bitsPerColor) {
 	const shadesPerColor = 1 << bitsPerColor;
 	const shadesScale = (shadesPerColor - 1) / 255;
 	return { shadesScale, inverseShadesScale: 1 / shadesScale };
-}
-
-export function getSpectrum512ColorSlotIndex(x, colorIndex) {
-	let temp = 10 * colorIndex;
-
-	if (colorIndex & 1) {
-		temp -= 5;
-	} else {
-		temp += 1;
-	}
-
-	if (x < temp) {
-		return colorIndex;
-	}
-	if (x >= temp + 160) {
-		return colorIndex + 32;
-	}
-	return colorIndex + 16;
-}
-
-function clampColor(value) {
-	if (value < 0) {
-		return 0;
-	}
-	if (value > 255) {
-		return 255;
-	}
-	return value;
 }
 
 function quantizeChannel(value, shadesScale, inverseShadesScale) {
@@ -572,7 +548,7 @@ function createLineProcessingEntries({
 	return entries;
 }
 
-function applyBruteForceOptimizationToEntries({ entries, width, bitsPerColor }) {
+function applyBruteForceOptimizationToEntries({ entries, width }) {
 	if (!entries || entries.length < 1) {
 		return;
 	}
@@ -582,8 +558,7 @@ function applyBruteForceOptimizationToEntries({ entries, width, bitsPerColor }) 
 			lineData: entry.lineData,
 			initialSlots: entry.colorSlots
 		})),
-		width,
-		bitsPerColor
+		width
 	});
 
 	for (let i = 0; i < entries.length; i += 1) {
@@ -713,12 +688,8 @@ function prepareSpectrum512Lines({ sourceCanvas, yStart, yEnd, options }) {
 		inverseShadesScale
 	});
 
-	if (resolveOptimizerMode(options) === OPTIMIZER_MODE_BRUTE_FORCE_WEBGL) {
-		applyBruteForceOptimizationToEntries({
-			entries,
-			width,
-			bitsPerColor
-		});
+	if (resolveOptimizerMode(options) === OPTIMIZER_MODE_BRUTE_FORCE) {
+		applyBruteForceOptimizationToEntries({ entries, width });
 	}
 
 	return { width, height, entries };

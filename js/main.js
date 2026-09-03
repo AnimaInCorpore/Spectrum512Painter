@@ -46,7 +46,7 @@ const ditherFs85Entry = document.getElementById('menu-color-dither-fs-85');
 const ditherFs75Entry = document.getElementById('menu-color-dither-fs-75');
 const ditherFs50Entry = document.getElementById('menu-color-dither-fs-50');
 const ditherFalseFsEntry = document.getElementById('menu-color-dither-false-fs');
-const bruteForceShaderEntry = document.getElementById('menu-options-bruteforce-shader');
+const bruteForceEntry = document.getElementById('menu-options-bruteforce');
 const undoMenuItem = document.getElementById('menu-options-undo');
 const redoMenuItem = document.getElementById('menu-options-redo');
 
@@ -68,7 +68,7 @@ const ditherEntryMap = {
 let spectrum512Enabled = true;
 let spectrumTarget = 'ste4096';
 let spectrumDither = 'checks';
-let bruteForceShaderEnabled = false;
+let bruteForceEnabled = false;
 let lastLoadedSource = null;
 let sourceRevision = 0;
 let spectrumSession = null;
@@ -186,8 +186,8 @@ function getSpectrumConversionOptions() {
 		bitsPerColor: target.bitsPerColor,
 		ditherMode: ditherPreset.mode || 'errorDiffusion',
 		ditherPattern: ditherPreset.pattern || null,
-		optimizerMode: bruteForceShaderEnabled
-			? SPECTRUM512_OPTIMIZER_MODES.bruteForceWebgl
+		optimizerMode: bruteForceEnabled
+			? SPECTRUM512_OPTIMIZER_MODES.bruteForce
 			: SPECTRUM512_OPTIMIZER_MODES.greedy
 	};
 }
@@ -219,9 +219,9 @@ function updateSpectrumMenuEntries() {
 		entry.setAttribute('aria-disabled', String(!DITHER_MENU_ENABLED));
 	});
 
-	if (bruteForceShaderEntry) {
-		bruteForceShaderEntry.textContent = `Brute-Force Shader ${bruteForceShaderEnabled ? 'On' : 'Off'}`;
-		bruteForceShaderEntry.setAttribute('aria-pressed', String(bruteForceShaderEnabled));
+	if (bruteForceEntry) {
+		bruteForceEntry.textContent = `Brute-Force ${bruteForceEnabled ? 'On' : 'Off'}`;
+		bruteForceEntry.setAttribute('aria-pressed', String(bruteForceEnabled));
 	}
 }
 
@@ -535,9 +535,9 @@ Object.entries(ditherEntryMap).forEach(([key, entry]) => {
 	});
 });
 
-if (bruteForceShaderEntry) {
-	bruteForceShaderEntry.addEventListener('click', () => {
-		bruteForceShaderEnabled = !bruteForceShaderEnabled;
+if (bruteForceEntry) {
+	bruteForceEntry.addEventListener('click', () => {
+		bruteForceEnabled = !bruteForceEnabled;
 		updateSpectrumMenuEntries();
 		if (spectrum512Enabled && lastLoadedSource) {
 			renderSpectrumSession({ resetScroll: false });
