@@ -21,11 +21,24 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Full history, so the timestamp step below can find each file's last commit.
+          fetch-depth: 0
 
-      - name: Install lftp
+      - name: Install deploy tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq lftp
+          sudo apt-get install -y -qq lftp git-restore-mtime
+
+      # git does not record mtimes, so a fresh checkout stamps every file with the time of
+      # the run. `mirror` compares size and mtime, so without this every deploy re-uploads
+      # the entire site. Setting each file's mtime to the date of the commit that last
+      # touched it makes those timestamps stable between runs, so only genuinely changed
+      # files transfer. `--ignore-time` would also stop the churn, but it compares size
+      # alone and would silently skip an edit that happens to preserve a file's length.
+      # Must run before the metadata is stripped, since it reads .git.
+      - name: Restore file timestamps from git history
+        run: git-restore-mtime --skip-missing
 
       # The mirror step below uploads the whole workspace, so anything that must not be
       # published has to be gone before it runs. Deleting these rather than adding an
