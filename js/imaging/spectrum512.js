@@ -394,6 +394,13 @@ function getIntermediateLine(intermediateData, width, y) {
 	return line;
 }
 
+// Ward's merge cost: the increase in squared Oklab error when two clusters are joined.
+function getColorMergeCost(colorA, colorB) {
+	const totalCount = colorA.count + colorB.count;
+	const frequencyWeight = colorA.count * colorB.count / totalCount;
+	return OklabDistance(colorA.oklab, colorB.oklab) * frequencyWeight;
+}
+
 function findClosestColorPairToMerge(colors) {
 	let bestScore = Number.MAX_VALUE;
 	let bestA = null;
@@ -411,10 +418,7 @@ function findClosestColorPairToMerge(colors) {
 				continue;
 			}
 
-			const distance = OklabDistance(colorA.oklab, colorB.oklab);
-			const lightnessGap = Math.abs(colorA.oklab[0] - colorB.oklab[0]);
-			const chromaGap = Math.abs(colorA.chroma - colorB.chroma);
-			const score = distance * (colorA.count + colorB.count) * (1 + lightnessGap) * (1 + chromaGap);
+			const score = getColorMergeCost(colorA, colorB);
 
 			if (score < bestScore) {
 				bestScore = score;
