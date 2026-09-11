@@ -18,10 +18,12 @@ function merge(a, b) {
 }
 
 function fillSlots(line, options = {}) {
+	const registerCount = options.registerCount ?? 16;
+	const slotFor = options.slotAt ?? slotAt;
 	const slots = options.checkpoint ? structuredClone(options.checkpoint) : Array.from({ length: 48 }, (_, i) => color(0, i === 0 || i === 32 ? 2 : 0));
 	for (let x = options.startX || 0; x < 320; x++) {
 		if (x % 32 === 0) options.onCheckpoint?.(x, structuredClone(slots));
-		const incoming = color(line[x]), active = Array.from({ length: 16 }, (_, i) => slotAt(x, i));
+		const incoming = color(line[x]), active = Array.from({ length: registerCount }, (_, i) => slotFor(x, i));
 		let placed = false;
 		for (const index of active) {
 			if (slots[index].id === incoming.id) {
@@ -53,14 +55,15 @@ function fillSlots(line, options = {}) {
 }
 
 export function convertLine(line, options) {
+	const slotFor = options?.slotAt ?? slotAt;
 	const slots = fillSlots(line, options), planar = Buffer.alloc(160), rgb = new Uint8Array(960);
 	for (let x = 0; x < 320; x++) {
 		let best = Infinity, index = 0;
-		for (let i = 0; i < 16; i++) {
-			const d = distance(line[x], slots[slotAt(x, i)]);
+		for (let i = 0; i < (options?.registerCount ?? 16); i++) {
+			const d = distance(line[x], slots[slotFor(x, i)]);
 			if (d < best) { best = d; index = i; }
 		}
-		const id = slots[slotAt(x, index)];
+		const id = slots[slotFor(x, index)];
 		rgb.set([(id >> 8) * 17, ((id >> 4) & 15) * 17, (id & 15) * 17], x * 3);
 		for (let plane = 0; plane < 4; plane++) if (index & (1 << plane)) {
 			const offset = (x >> 4) * 8 + plane * 2;
