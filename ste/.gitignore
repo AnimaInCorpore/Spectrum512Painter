@@ -1,0 +1,11 @@
+# Built programs, listings and generated data of the ball demos; the tools
+# (verify-eight.mjs, verify-colored.mjs, verify-fullcolor.mjs, verify-limited.mjs)
+# regenerate them. Files the first sprite demo already tracks stay tracked.
+/*.PRG
+/*.lst
+/assets/colored-*
+/assets/eight-*
+/assets/fullcolor-*
+/assets/limited*
+# Hatari verification runs.
+/verification-*/

@@ -16,9 +16,15 @@ spectrum_vbl:
         move.l  front_palettes,back_palettes
         move.l  d2,front_palettes
         move.l  d2,display_palettes_pointer
+        ifd EIGHT_BALLS
+        move.l  back_positions,d2
+        move.l  front_positions,back_positions
+        move.l  d2,front_positions
+        else
         move.w  back_old_y,d2
         move.w  front_old_y,back_old_y
         move.w  d2,front_old_y
+        endc
         move.b  d1,$ffff820d.w
         lsr.l   #8,d1
         move.b  d1,$ffff8203.w
