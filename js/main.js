@@ -15,6 +15,7 @@ import { initPatternPalette } from './ui/patterns.js';
 import { initShapeModeControl } from './ui/shape-mode.js';
 import { initToolSelection } from './ui/tools.js';
 import { initUndoRedoControls } from './ui/undo-redo.js';
+import { initImageCommands } from './ui/image-commands.js';
 import {
 	createSpectrumCanvas,
 	SPECTRUM_CANVAS_WIDTH,
@@ -611,6 +612,21 @@ undoRedoControls = initUndoRedoControls({
 	canUndo: () => historyManager.canUndo(),
 	canRedo: () => historyManager.canRedo()
 });
+
+function applyImageTransform(transform) {
+	const state = captureEditableBitmapState();
+	if (!state) {
+		return;
+	}
+	historyManager.beginTransaction();
+	applyHistoryBitmapState(transform(state));
+	const { committed, afterState } = historyManager.endTransaction();
+	if (committed && afterState) {
+		persistBitmapState(afterState, { invalidateSpectrumSession: !spectrum512Enabled });
+	}
+}
+
+initImageCommands({ applyTransform: applyImageTransform });
 
 const toolController = createToolController({
 	canvas,
