@@ -14,17 +14,17 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 2.1 Color and Surfaces
 
-- Primary UI palette is grayscale (white, light gray, medium gray, black).
-- Use dither patterns sparingly for texture and inactive/background regions.
+- The UI is effectively 1-bit: white and black only. Gray is always produced by dither patterns, never by a gray color value.
+- Use dither for inactive/background regions and for disabled text and separators.
 - Avoid gradients, blur, transparency effects, drop-shadows, and glassmorphism.
 - Keep strong contrast on edges and active controls.
 
 ### 2.2 Borders and Relief
 
-- Use 1px/2px beveled borders to indicate raised vs sunken controls.
-- Raised controls: light edge top/left, dark edge bottom/right.
-- Sunken controls (fields, canvas viewport, pressed buttons): inverted bevel.
-- Keep bevel style consistent across all panels and controls.
+- Classic GEM and 1-bit Mac chrome is flat: 1px/2px black outlines, no 3D bevels.
+- Pressed, selected and active states are shown by inversion (black fill, white content), not by relief.
+- Menus and dialogs may carry a hard, unblurred 2-4px black drop shadow; the default dialog button gets an extra outline ring.
+- Keep outline weights consistent across all panels and controls.
 
 ### 2.3 Typography
 
@@ -36,8 +36,8 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 3.1 Main Window
 
-- Keep title bar with classic affordances: close box, title text, full-size gadget.
-- Keep tool palette, canvas window, and pattern panel visually separated by bevels.
+- Keep title bar with classic affordances: close box, title text on a white plate over horizontal stripes, full-size gadget.
+- Keep tool palette, canvas window, and pattern panel visually separated by outlines.
 - Avoid floating translucent overlays except explicit modal dialogs.
 
 ### 3.2 Canvas Area
@@ -59,14 +59,15 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 - Use concise verbs/nouns with ellipsis on commands that open a dialog:
   - `Open...`, `Save As...`, `Image Size...`
-- Show keyboard shortcuts in a dedicated right-aligned column where applicable.
+- Show keyboard shortcuts in a dedicated right-aligned column where applicable (`Ctrl+N`; `^N` is the historical form).
 - Use separators only to group meaningful clusters.
 
 ### 4.3 Menu Behavior
 
-- Menus open on click and close on outside click or command activation.
+- Menus drop down on mouse-over (as in GEM) and also on click; they close when the pointer leaves the bar, on outside click, on Esc, or on command activation.
 - Disabled items remain visible but inactive (never removed).
-- Checked/toggled items should have an explicit indicator.
+- Checked/toggled items must have an explicit check mark in the reserved left column. Use a single check glyph only; no other decorative symbols.
+- Disabled entries are dithered, not gray.
 - Keep submenu depth minimal (prefer at most one nested level).
 
 ## 5. Dialogs and Alerts
@@ -84,7 +85,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
   - clear canvas
   - overwrite file
   - discard unsaved changes
-- Use two-button minimum (`Cancel` + explicit action label, not `OK` when possible).
+- Use two buttons: `OK` (default, Enter) and `Cancel` (Esc), as GEM alerts did. Put the specific action in the message text.
 
 ### 5.3 Error Alerts
 
@@ -115,8 +116,8 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 7.1 Buttons
 
-- Use beveled rectangular buttons with consistent padding.
-- Pressed state should invert relief immediately on pointer down.
+- Use outlined rectangular buttons with consistent padding.
+- Pressed state should invert (black fill, white text) immediately on pointer down.
 - Disabled buttons remain visible with reduced contrast.
 
 ### 7.2 Sliders and Numeric Controls
@@ -181,7 +182,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 When changing UI, verify:
 
-1. Period-correct visuals (bevels, grayscale, icon style) are preserved.
+1. Period-correct visuals (flat outlines, dithered grays, icon style) are preserved.
 2. Menu labels/ordering remain stable and in classic English.
 3. Disabled/inactive states are visible, not removed.
 4. Canvas/scroll behavior still matches classic rules.

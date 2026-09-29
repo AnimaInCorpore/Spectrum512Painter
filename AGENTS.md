@@ -35,8 +35,8 @@ This project is a painting program for the **Spectrum 512 Atari ST image format*
 - The website shall mimic an **ancient Atari GEM-like GUI**.
 - Use **proper GEM-style English text** for all visible GUI labels, menus, and captions.
 - Favor classic windowed desktop styling:
-  - flat grayscale panels,
-  - beveled borders,
+  - flat 1-bit panels,
+  - flat black outlines with dithered grays,
   - pixel-like iconography,
   - retro menu/toolbox layout,
   - minimal modern visual effects.

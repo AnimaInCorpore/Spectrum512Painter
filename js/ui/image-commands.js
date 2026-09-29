@@ -1,11 +1,11 @@
 import { flipHorizontal, flipVertical, invertColors, clearToWhite } from '../imaging/transforms.js';
 
 const COMMANDS = [
-	{ id: 'menu-file-new', transform: clearToWhite, key: 'n' },
+	{ id: 'menu-file-new', transform: clearToWhite, key: 'n', confirm: 'Discard the current picture and start a new one?' },
 	{ id: 'menu-block-flip-h', transform: flipHorizontal, key: 'h' },
 	{ id: 'menu-block-flip-v', transform: flipVertical, key: 'j' },
 	{ id: 'menu-block-invert', transform: invertColors, key: 'i' },
-	{ id: 'menu-block-clear', transform: clearToWhite, key: null }
+	{ id: 'menu-block-clear', transform: clearToWhite, key: null, confirm: 'Clear the whole picture?' }
 ];
 
 function isTextTarget(target) {
@@ -13,15 +13,23 @@ function isTextTarget(target) {
 	return tag === 'input' || tag === 'textarea' || tag === 'select';
 }
 
-export function initImageCommands({ applyTransform }) {
-	COMMANDS.forEach(({ id, transform }) => {
+export function initImageCommands({ applyTransform, confirmAlert }) {
+	const run = async command => {
+		if (command.confirm && confirmAlert && !(await confirmAlert(command.confirm))) {
+			return;
+		}
+		applyTransform(command.transform);
+	};
+
+	COMMANDS.forEach(command => {
+		const { id } = command;
 		const entry = document.getElementById(id);
 		if (!entry) {
 			return;
 		}
 		entry.addEventListener('click', () => {
 			if (!entry.classList.contains('disabled')) {
-				applyTransform(transform);
+				run(command);
 			}
 		});
 	});
@@ -37,7 +45,7 @@ export function initImageCommands({ applyTransform }) {
 		const command = COMMANDS.find(c => c.key && c.key === event.key.toLowerCase());
 		if (command) {
 			event.preventDefault();
-			applyTransform(command.transform);
+			run(command);
 		}
 	});
 }

@@ -15,6 +15,7 @@ import { initPatternPalette } from './ui/patterns.js';
 import { initShapeModeControl } from './ui/shape-mode.js';
 import { initToolSelection } from './ui/tools.js';
 import { initUndoRedoControls } from './ui/undo-redo.js';
+import { initAlertDialog } from './ui/alert.js';
 import { initImageCommands } from './ui/image-commands.js';
 import {
 	createSpectrumCanvas,
@@ -626,7 +627,7 @@ function applyImageTransform(transform) {
 	}
 }
 
-initImageCommands({ applyTransform: applyImageTransform });
+initImageCommands({ applyTransform: applyImageTransform, confirmAlert: initAlertDialog() });
 
 const toolController = createToolController({
 	canvas,
