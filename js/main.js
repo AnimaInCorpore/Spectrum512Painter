@@ -2,6 +2,7 @@ import { PATTERN_CLASSES } from './config/patterns.js';
 import { GEM_256_COLORS } from './config/colors.js';
 import { createCanvasDocument } from './canvas/document.js';
 import { createHistoryManager } from './canvas/history.js';
+import { createSelection } from './canvas/selection.js';
 import { createViewportScroller } from './canvas/viewport.js';
 import { setupFileLoading } from './io/loading.js';
 import { setupFileSaving } from './io/saving.js';
@@ -568,7 +569,8 @@ window.addEventListener('resize', () => {
 });
 
 const toolState = createToolState('pencil');
-const toolRegistry = createToolRegistry();
+const selection = createSelection({ canvas, container: canvasContainer });
+const toolRegistry = createToolRegistry({ selection });
 
 const patternPalette = initPatternPalette(patternsGrid, PATTERN_CLASSES, {
 	toolState,
@@ -636,7 +638,7 @@ function applyImageTransform(transform) {
 	}
 }
 
-initImageCommands({ applyTransform: applyImageTransform, confirmAlert: initAlertDialog() });
+initImageCommands({ selection, applyTransform: applyImageTransform, confirmAlert: initAlertDialog() });
 
 const toolController = createToolController({
 	canvas,
@@ -678,6 +680,7 @@ setupFileLoading({
 		clearSpectrumSession();
 		renderLoadedSource();
 		historyManager.clear();
+		selection.clear();
 	},
 	onBitmapLoaded: ({ width, height, pixels, fileName, sourceFormat, bitsPerColor }) => {
 		if (sourceFormat === 'spu') {

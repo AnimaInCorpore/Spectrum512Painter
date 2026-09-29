@@ -690,6 +690,15 @@
 		}
 
 
+		.gem-marquee {
+			position: absolute;
+			pointer-events: none;
+			z-index: 2;
+			outline: 1px dashed var(--black);
+			box-shadow: 0 0 0 1px var(--white);
+		}
+		.gem-marquee[hidden] { display: none; }
+
 		.gem-pattern-grid {
 			display: grid;
 			border-top: 1px solid var(--black);
@@ -804,8 +813,8 @@
 					<button type="button" class="gem-menu-entry" id="menu-block-invert"><span>Invert Colors</span><span class="gem-menu-shortcut">Ctrl+I</span></button>
 					<button type="button" class="gem-menu-entry" id="menu-block-clear">Clear Image</button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry disabled">Select All</button>
-					<button type="button" class="gem-menu-entry disabled">Deselect</button>
+					<button type="button" class="gem-menu-entry" id="menu-block-select-all"><span>Select All</span><span class="gem-menu-shortcut">Ctrl+A</span></button>
+					<button type="button" class="gem-menu-entry disabled" id="menu-block-deselect">Deselect</button>
 					<button type="button" class="gem-menu-entry disabled">Invert Selection</button>
 					<button type="button" class="gem-menu-entry disabled">Crop to Selection</button>
 				</div>
