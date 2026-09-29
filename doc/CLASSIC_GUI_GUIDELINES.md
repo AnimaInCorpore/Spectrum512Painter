@@ -42,6 +42,8 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 3.2 Canvas Area
 
+- A rectangular selection is shown as a dashed outline over the canvas; Block commands act on it, or on the whole picture when nothing is selected.
+
 - Canvas sits in a distinct viewport frame with classic recessed look.
 - When image is smaller than viewport, uncovered area should use neutral classic fill.
 - When image/zoom exceeds viewport, scrolling is enabled per axis.
@@ -64,6 +66,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 4.3 Menu Behavior
 
+- A dropdown must sit flush against its menu title (no gap) so the pointer never leaves the menu while moving into it.
 - Menus drop down on mouse-over (as in GEM) and also on click; they close when the pointer leaves the bar, on outside click, on Esc, or on command activation.
 - Disabled items remain visible but inactive (never removed).
 - Checked/toggled items must have an explicit check mark in the reserved left column. Use a single check glyph only; no other decorative symbols.

@@ -22,7 +22,6 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - True-color pseudo-plane variants: `16` (5:6:5) and `24` (8:8:8).
   - Documented scanline RLE items and vertical replication marker.
 - Spectrum conversion pipeline
-  - Patterns: 38 tiles; double-click a tile or use `Options -> Edit Pattern...` to edit it.
   - Toggle: `Color -> Spectrum 512` (check mark = on).
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
@@ -49,9 +48,18 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - `Pie Slice` (outline).
 - Palette and paint controls
   - 256-color GEM-style palette with foreground/background swatches.
-  - 21 built-in pattern tiles.
+  - 38 pattern tiles (GEM Paint's 21 plus 17 added 8x8 ones); double-click a tile or use `Options -> Edit Pattern...` to edit it in a GEM-style dialog.
   - Line size slider (`1..8`).
   - Shape mode toggle (`FRAME` / `FILL`).
+- Selection and image commands
+  - `Marquee` tool: drag to select a rectangle (dashed outline), click to deselect.
+  - `Block -> Select All` (`Ctrl/Cmd+A`) and `Block -> Deselect`.
+  - `File -> New` (`Ctrl/Cmd+N`) and `Block -> Clear Image` ask for confirmation in a GEM-style alert.
+  - `Block -> Flip Horizontal` (`Ctrl/Cmd+H`), `Flip Vertical` (`Ctrl/Cmd+J`), `Invert Colors` (`Ctrl/Cmd+I`), `Clear Image`: act on the selection if there is one, otherwise on the whole picture. All are undoable.
+- GEM look and feel
+  - Flat 1-bit chrome: striped title bars, hard menu shadows, dithered disabled entries, inverted pressed states.
+  - Menus drop down on hover and close when the pointer leaves the menu bar.
+  - Toggle entries show a check mark when on.
 - Editing history
   - Undo/Redo with a fixed history depth of `32` actions.
   - Menu commands (`Options -> Undo`, `Options -> Redo`) and shortcuts (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`).
@@ -60,9 +68,10 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 
 ### Not Implemented Yet
 
-- Toolbox icons present but currently no-op: `Marquee`, `Text`.
+- Toolbox icon present but currently no-op: `Text`.
+- Selections cannot be moved, copied, cut or pasted yet; `Invert Selection` and `Crop to Selection` are disabled.
 - Many menu entries are placeholders (for example selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
-- Menu shortcut labels are mostly visual and not globally wired as keyboard shortcuts (Undo/Redo shortcuts are implemented).
+- Menu shortcut labels are mostly visual. Wired shortcuts: Undo/Redo, New, Select All, Flip Horizontal/Vertical and Invert Colors.
 
 ## Run Locally
 

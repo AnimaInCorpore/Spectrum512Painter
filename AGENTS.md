@@ -16,11 +16,11 @@ This project is a painting program for the **Spectrum 512 Atari ST image format*
 - Keep tool identifiers stable via `data-tool` attributes in the UI and matching keys in the tool registry.
 
 ### Current JS Module Layout
-- `js/ui/*`: GEM menu behavior, tool button selection, pattern palette UI.
-- `js/canvas/*`: canvas document state and custom GEM viewport scrollbar behavior.
+- `js/ui/*`: GEM menu behavior, tool button selection, pattern palette and pattern editor, alert dialog, image commands.
+- `js/canvas/*`: canvas document state, history, rectangular selection, and custom GEM viewport scrollbar behavior.
 - `js/io/*`: file loading, saving, and export handlers.
 - `js/tools/*`: tool state, tool controller, tool registry, helpers, and per-tool implementations.
-- `js/imaging/*`: image processing and color operations (for example quantization, palette mapping, dithering, conversions).
+- `js/imaging/*`: image processing and color operations (for example quantization, palette mapping, dithering, conversions, whole-bitmap transforms).
 - `js/formats/*`: file format encode/decode modules (for example Spectrum 512 readers/writers and related bitmap import/export codecs).
 - `js/config/*`: shared static configuration (for example pattern class lists).
 
