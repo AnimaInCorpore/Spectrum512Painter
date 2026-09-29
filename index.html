@@ -133,6 +133,8 @@
 			color: transparent;
 		}
 
+		.gem-menu-entry.gem-menu-check { padding-left: 6px; white-space: pre; }
+
 		.gem-menu-separator {
 			height: 2px;
 			margin: 0;
@@ -763,9 +765,9 @@
 				<div class="gem-dropdown">
 					<button type="button" class="gem-menu-entry disabled" id="menu-options-undo"><span>Undo</span><span class="gem-menu-shortcut">Z</span></button>
 					<button type="button" class="gem-menu-entry disabled" id="menu-options-redo"><span>Redo</span><span class="gem-menu-shortcut">Shift+Z</span></button>
-					<button type="button" class="gem-menu-entry disabled">Grid On</button>
-					<button type="button" class="gem-menu-entry disabled">Transparent On</button>
-					<button type="button" class="gem-menu-entry" id="menu-options-bruteforce">Brute-Force Off</button>
+					<button type="button" class="gem-menu-entry disabled gem-menu-check">  Grid</button>
+					<button type="button" class="gem-menu-entry disabled gem-menu-check">  Transparent</button>
+					<button type="button" class="gem-menu-entry" id="menu-options-bruteforce">  Brute-Force</button>
 					<div class="gem-menu-separator"></div>
 					<button type="button" class="gem-menu-entry disabled">Brush Shape...</button>
 					<button type="button" class="gem-menu-entry disabled">View Image...</button>
@@ -789,7 +791,7 @@
 			<div class="gem-menu">
 				<button type="button" class="gem-menubar-item">Color</button>
 				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry" id="menu-color-spectrum512">Spectrum 512 On</button>
+					<button type="button" class="gem-menu-entry" id="menu-color-spectrum512">✓ Spectrum 512</button>
 					<div class="gem-menu-separator"></div>
 					<button type="button" class="gem-menu-entry" id="menu-color-target-512">512 (ST)</button>
 					<button type="button" class="gem-menu-entry" id="menu-color-target-4096">4096 (STE)</button>

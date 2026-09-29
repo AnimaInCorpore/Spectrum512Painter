@@ -69,7 +69,7 @@ GEM Paint was modeled after MacPaint. Use MacPaint as the authoritative referenc
 - Magnifies the canvas (8× scale) so individual pixels are visible and clickable as enlarged squares. All drawing tools remain fully functional in this mode. A small navigator inset shows the unzoomed position.
 
 ### Patterns & Brushes
-- A palette of 38 predefined tileable 8×8 monochrome patterns is available for fill, brush, and shape tools. Patterns should be user-editable.
+- A palette of 21 predefined tileable monochrome patterns (GEM Paint's set; MacPaint itself had 38) is available for fill, brush, and shape tools. User-editable patterns are not implemented yet.
 - Brush shapes (at least a basic set) are selectable from a palette.
 
 ### Canvas & Navigation

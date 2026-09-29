@@ -22,10 +22,10 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - True-color pseudo-plane variants: `16` (5:6:5) and `24` (8:8:8).
   - Documented scanline RLE items and vertical replication marker.
 - Spectrum conversion pipeline
-  - Toggle: `Color -> Spectrum 512 On/Off`.
+  - Toggle: `Color -> Spectrum 512` (check mark = on).
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
-  - Optimizer toggle: `Options -> Brute-Force On/Off` (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
+  - Optimizer toggle: `Options -> Brute-Force` (check mark = on) (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
   - The Floyd-Steinberg presets carry quantization error downwards, so an edit reconverts every line below it. Checks dithers each pixel independently and repaints only the edited lines, which makes it the faster mode to paint in.
 - Canvas and viewport
   - Default document is a white `320x200` canvas.

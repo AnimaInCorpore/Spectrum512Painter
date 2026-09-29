@@ -198,12 +198,13 @@ function setMenuChoiceText(entry, label, selected) {
 	if (!entry) {
 		return;
 	}
+	entry.classList.add('gem-menu-check');
 	entry.textContent = `${selected ? '✓' : ' '} ${label}`;
 }
 
 function updateSpectrumMenuEntries() {
 	if (spectrumToggleEntry) {
-		spectrumToggleEntry.textContent = `Spectrum 512 ${spectrum512Enabled ? 'On' : 'Off'}`;
+		setMenuChoiceText(spectrumToggleEntry, 'Spectrum 512', spectrum512Enabled);
 		spectrumToggleEntry.setAttribute('aria-pressed', String(spectrum512Enabled));
 	}
 
@@ -222,7 +223,7 @@ function updateSpectrumMenuEntries() {
 	});
 
 	if (bruteForceEntry) {
-		bruteForceEntry.textContent = `Brute-Force ${bruteForceEnabled ? 'On' : 'Off'}`;
+		setMenuChoiceText(bruteForceEntry, 'Brute-Force', bruteForceEnabled);
 		bruteForceEntry.setAttribute('aria-pressed', String(bruteForceEnabled));
 	}
 }
