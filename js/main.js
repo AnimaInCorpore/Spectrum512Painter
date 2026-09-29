@@ -15,6 +15,7 @@ import { initPatternPalette } from './ui/patterns.js';
 import { initShapeModeControl } from './ui/shape-mode.js';
 import { initToolSelection } from './ui/tools.js';
 import { initUndoRedoControls } from './ui/undo-redo.js';
+import { initPatternEditor } from './ui/pattern-editor.js';
 import { initAlertDialog } from './ui/alert.js';
 import { initImageCommands } from './ui/image-commands.js';
 import {
@@ -569,7 +570,14 @@ window.addEventListener('resize', () => {
 const toolState = createToolState('pencil');
 const toolRegistry = createToolRegistry();
 
-initPatternPalette(patternsGrid, PATTERN_CLASSES, { toolState });
+const patternPalette = initPatternPalette(patternsGrid, PATTERN_CLASSES, {
+	toolState,
+	editPattern: initPatternEditor()
+});
+const editPatternEntry = document.getElementById('menu-options-edit-pattern');
+if (editPatternEntry && patternPalette) {
+	editPatternEntry.addEventListener('click', () => patternPalette.editActivePattern());
+}
 
 initColorPalette({
 	colorGrid,

@@ -22,6 +22,7 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - True-color pseudo-plane variants: `16` (5:6:5) and `24` (8:8:8).
   - Documented scanline RLE items and vertical replication marker.
 - Spectrum conversion pipeline
+  - Patterns: 38 tiles; double-click a tile or use `Options -> Edit Pattern...` to edit it.
   - Toggle: `Color -> Spectrum 512` (check mark = on).
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.

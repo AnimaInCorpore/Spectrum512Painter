@@ -210,5 +210,37 @@ export const PATTERN_MASKS = [
 			'1011000000000111',
 			'1101110000001111'
 		]
-	}
+	},
+	// Additional 8x8 patterns (bring the palette to the MacPaint count of 38).
+	...[
+		(x, y) => y % 2 === 0,
+		(x, y) => (y >> 1) % 2 === 0,
+		(x, y) => x % 2 === 0,
+		(x, y) => (x >> 1) % 2 === 0,
+		(x, y) => (x + y) % 4 === 0,
+		(x, y) => (x - y + 8) % 4 === 0,
+		(x, y) => (x + y) % 4 < 2,
+		(x, y) => x % 4 === 0 || y % 4 === 0,
+		(x, y) => x % 4 === 0 && y % 4 === 0,
+		(x, y) => x % 2 === 0 && y % 2 === 0,
+		(x, y) => ((x >> 2) + (y >> 2)) % 2 === 0,
+		(x, y) => y % 4 === 0 || x % 8 === ((y >> 2) % 2) * 4,
+		(x, y) => x === y || x + y === 7,
+		(x, y) => (x + y) % 4 === 0 || (x - y + 8) % 4 === 2,
+		(x, y) => (x % 4 === 0 || y % 4 === 0) && (x + y) % 2 === 0,
+		(x, y) => !(x % 2 === 1 && y % 2 === 1),
+		(x, y) => (x % 4 === 0 && y % 4 === 0) || (x % 4 === 2 && y % 4 === 2)
+	].map(bitAt => ({
+		width: 8,
+		height: 8,
+		rows: Array.from({ length: 8 }, (_row, y) =>
+			Array.from({ length: 8 }, (_cell, x) => (bitAt(x, y) ? '1' : '0')).join(''))
+	}))
 ];
+
+// Replace a pattern with a user-edited mask (the tools read PATTERN_MASKS live).
+export function setPatternMask(index, mask) {
+	if (index >= 0 && index < PATTERN_MASKS.length) {
+		PATTERN_MASKS[index] = mask;
+	}
+}

@@ -129,6 +129,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 ### 7.3 Lists and Palettes
 
 - Use strict grid layout for pattern and brush palettes.
+- The pattern palette holds 38 tiles. Double-clicking a tile (or `Options -> Edit Pattern...`) opens a modal `Edit Pattern` dialog with a magnified click/drag grid and `OK`, `Cancel`, `Invert`, `Clear` buttons. Edits apply to the tools immediately.
 - Selection must be visible at all times with a clear border/inset cue.
 - Keep spacing and tile dimensions constant to preserve rhythm.
 
