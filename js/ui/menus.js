@@ -28,20 +28,14 @@ export function initGemMenus({ menuRoot, menuSelector = '.gem-menu', menuEntrySe
 
 		trigger.addEventListener('click', event => {
 			event.stopPropagation();
-			if (openMenu === menu) {
-				closeMenus();
-				return;
-			}
 			openMenuPanel(menu);
 		});
 
-		menu.addEventListener('mouseenter', () => {
-			if (!openMenu) {
-				return;
-			}
-			openMenuPanel(menu);
-		});
+		menu.addEventListener('mouseenter', () => openMenuPanel(menu));
 	});
+
+	// GEM drops menus on mouse-over; leaving the bar closes them.
+	menuRoot.addEventListener('mouseleave', closeMenus);
 
 	document.querySelectorAll(menuEntrySelector).forEach(entry => {
 		entry.addEventListener('click', event => {

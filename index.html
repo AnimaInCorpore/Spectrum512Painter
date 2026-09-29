@@ -88,7 +88,8 @@
 			background: var(--white);
 			border: 2px solid var(--black);
 			z-index: 50;
-			padding: 2px 0;
+			padding: 0;
+			box-shadow: 2px 2px 0 var(--black);
 		}
 
 		.gem-menu.open .gem-dropdown {
@@ -97,12 +98,13 @@
 
 		.gem-menu-entry {
 			border: none;
+			border-radius: 0;
 			background: transparent;
 			color: inherit;
 			font: inherit;
 			width: 100%;
 			height: 20px;
-			padding: 0 8px;
+			padding: 0 8px 0 20px;
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
@@ -116,20 +118,29 @@
 			color: var(--white);
 		}
 
+		/* Disabled entries are dithered, as in GEM */
 		.gem-menu-entry.disabled {
-			color: #666666;
+			color: transparent;
+			background-image: var(--dither-2x2);
+			background-color: var(--white);
+			-webkit-background-clip: text;
+			background-clip: text;
 			cursor: default;
 		}
 
 		.gem-menu-entry.disabled:hover {
-			background: transparent;
-			color: #666666;
+			background-color: var(--white);
+			color: transparent;
 		}
 
 		.gem-menu-separator {
 			height: 2px;
-			margin: 2px 0;
+			margin: 0;
+			background-image: var(--dither-2x2);
+			background-color: var(--white);
 			border-top: 1px solid var(--black);
+			border-bottom: 1px solid var(--black);
+			height: 4px;
 		}
 
 		.gem-menu-shortcut {
@@ -169,7 +180,11 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			background: var(--white);
+			background-color: var(--white);
+			background-image: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, var(--white) 1px, var(--white) 3px);
+			background-size: 100% 12px;
+			background-position: 0 4px;
+			background-repeat: no-repeat;
 		}
 
 		.gem-titlebar-close {
@@ -202,7 +217,15 @@
 			font-family: 'Atari ST', sans-serif;
 			font-weight: normal;
 			font-size: 16px;
+			background: var(--white);
+			padding: 0 8px;
+			max-width: calc(100% - 100px);
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: clip;
 		}
+		.gem-titlebar-name:empty { display: none; }
+		.gem-titlebar-close, .gem-titlebar-full { background-color: var(--white); }
 
 		/* ===== WORKSPACE GRID ===== */
 		.gem-workspace {
@@ -247,7 +270,9 @@
 		.gem-tool-btn:nth-child(3n) { border-right: none; }
 		.gem-tool-btn:nth-last-child(-n+3) { border-bottom: none; }
 
+		.gem-tool-btn:active,
 		.gem-tool-btn.active { background: var(--black); }
+		.gem-tool-btn:active .gem-sprite { filter: invert(1); }
 		.gem-tool-btn.active .gem-sprite { filter: invert(1); }
 
 		.gem-tool-btn svg { width: 18px; height: 18px; }
@@ -291,7 +316,9 @@
 		}
 
 		.gem-color-tile.active {
-			filter: brightness(1.2) saturate(1.15);
+			outline: 1px solid var(--white);
+			outline-offset: -2px;
+			box-shadow: inset 0 0 0 1px var(--black);
 		}
 
 		/* Slider */
@@ -426,6 +453,7 @@
 			border-right: 2px solid var(--black);
 		}
 
+		.gem-sb-btn:active { filter: invert(1); }
 		.gem-sb-btn {
 			width: 17px;
 			height: 17px;
@@ -469,6 +497,7 @@
 			z-index: 0;
 		}
 
+		.gem-sb-thumb:active { background: var(--black); }
 		.gem-sb-thumb {
 			position: absolute;
 			background: var(--white);
@@ -576,13 +605,20 @@
 			width: 340px;
 			display: flex;
 			flex-direction: column;
+			outline: 1px solid var(--black);
+			outline-offset: 2px;
+			box-shadow: 4px 4px 0 var(--black);
 		}
 		.gem-about-titlebar {
 			height: 20px;
 			border-bottom: 2px solid var(--black);
 			display: flex;
 			align-items: center;
-			background: var(--white);
+			background-color: var(--white);
+			background-image: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, var(--white) 1px, var(--white) 3px);
+			background-size: 100% 12px;
+			background-position: 0 4px;
+			background-repeat: no-repeat;
 		}
 		.gem-about-titlebar-close {
 			width: 20px;
@@ -597,7 +633,9 @@
 			border: none;
 		}
 		.gem-about-titlebar-name {
-			flex: 1;
+			margin: 0 auto;
+			background: var(--white);
+			padding: 0 8px;
 			text-align: center;
 			font-family: 'Atari ST', sans-serif;
 			font-size: 16px;
@@ -630,6 +668,14 @@
 			padding: 2px 24px;
 			cursor: pointer;
 			min-width: 80px;
+			border-radius: 0;
+			/* Default button: extra outline ring */
+			outline: 2px solid var(--black);
+			outline-offset: 1px;
+		}
+		.gem-about-ok:active {
+			background: var(--black);
+			color: var(--white);
 		}
 		.gem-about-ok:hover {
 			background: var(--black);
