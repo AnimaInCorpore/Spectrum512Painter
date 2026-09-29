@@ -277,6 +277,11 @@
 		.gem-tool-btn:active .gem-sprite { filter: invert(1); }
 		.gem-tool-btn.active .gem-sprite { filter: invert(1); }
 
+		/* The Fill tile is baked into the sprite sheet as selected (inverted); normalize it. */
+		.gem-tool-btn[data-tool="fill"] .gem-sprite { filter: invert(1); }
+		.gem-tool-btn[data-tool="fill"].active .gem-sprite,
+		.gem-tool-btn[data-tool="fill"]:active .gem-sprite { filter: none; }
+
 		.gem-tool-btn svg { width: 18px; height: 18px; }
 
 		/* Fore/Background Colors */
