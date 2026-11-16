@@ -1,11 +1,10 @@
 import { restrictToRect, flipHorizontal, flipVertical, invertColors, clearToWhite } from '../imaging/transforms.js';
 
 const COMMANDS = [
-	{ id: 'menu-file-new', transform: clearToWhite, key: 'n', confirm: 'Discard the current picture and start a new one?' },
 	{ id: 'menu-block-flip-h', transform: flipHorizontal, key: 'h' },
 	{ id: 'menu-block-flip-v', transform: flipVertical, key: 'j' },
 	{ id: 'menu-block-invert', transform: invertColors, key: 'i' },
-	{ id: 'menu-block-clear', transform: clearToWhite, key: null, confirm: 'Clear the whole picture?', wholePictureOnly: true }
+	{ id: 'menu-block-clear', transform: clearToWhite, key: null, confirm: ['Clear the whole picture?'], wholePictureOnly: true }
 ];
 
 function isTextTarget(target) {
@@ -42,9 +41,8 @@ export function initImageCommands({ applyTransform, confirmAlert, selection }) {
 		if (needsConfirm && confirmAlert && !(await confirmAlert(command.confirm))) {
 			return;
 		}
-		// Selection-aware commands act on the selected block only; New always covers the whole picture.
-		const rect = selection && command.id !== 'menu-file-new' ? selection.rect : null;
-		applyTransform(restrictToRect(command.transform, rect));
+		// The commands act on the selected block only, or on the whole picture without a selection.
+		applyTransform(restrictToRect(command.transform, hasSelection ? selection.rect : null));
 	};
 
 	COMMANDS.forEach(command => {

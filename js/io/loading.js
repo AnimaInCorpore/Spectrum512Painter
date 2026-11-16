@@ -25,7 +25,7 @@ function hasDraggedFiles(event) {
 		: Boolean(types && typeof types.includes === 'function' && types.includes('Files'));
 }
 
-function loadGemImgFile(file, onBitmapLoaded) {
+function loadGemImgFile(file, { onBitmapLoaded, onError }) {
 	const binaryReader = new FileReader();
 	binaryReader.onload = event => {
 		try {
@@ -40,13 +40,13 @@ function loadGemImgFile(file, onBitmapLoaded) {
 				});
 			}
 		} catch (error) {
-			window.alert(`Could not open GEM IMG: ${error.message}`);
+			onError([`${file.name} could not be opened`, 'as a GEM IMG picture:', error.message]);
 		}
 	};
 	binaryReader.readAsArrayBuffer(file);
 }
 
-function loadSpuFile(file, onBitmapLoaded) {
+function loadSpuFile(file, { onBitmapLoaded, onError }) {
 	const binaryReader = new FileReader();
 	binaryReader.onload = event => {
 		try {
@@ -62,13 +62,13 @@ function loadSpuFile(file, onBitmapLoaded) {
 				});
 			}
 		} catch (error) {
-			window.alert(`Could not open SPU: ${error.message}`);
+			onError([`${file.name} could not be opened`, 'as a Spectrum 512 picture:', error.message]);
 		}
 	};
 	binaryReader.readAsArrayBuffer(file);
 }
 
-function loadImageFile(file, onImageLoaded) {
+function loadImageFile(file, { onImageLoaded, onError }) {
 	const reader = new FileReader();
 	reader.onload = event => {
 		const image = new Image();
@@ -76,29 +76,29 @@ function loadImageFile(file, onImageLoaded) {
 			onImageLoaded({ image, fileName: file.name });
 		};
 		image.onerror = () => {
-			window.alert(`Could not open picture: ${file.name}`);
+			onError([`${file.name} could not be opened.`, 'The file is not a picture this', 'program can read.']);
 		};
 		image.src = event.target.result;
 	};
 	reader.readAsDataURL(file);
 }
 
-function loadFile(file, { onImageLoaded, onBitmapLoaded }) {
+function loadFile(file, callbacks) {
 	if (!file) {
 		return;
 	}
 
 	if (isGemImgFile(file)) {
-		loadGemImgFile(file, onBitmapLoaded);
+		loadGemImgFile(file, callbacks);
 		return;
 	}
 
 	if (isSpuFile(file)) {
-		loadSpuFile(file, onBitmapLoaded);
+		loadSpuFile(file, callbacks);
 		return;
 	}
 
-	loadImageFile(file, onImageLoaded);
+	loadImageFile(file, callbacks);
 }
 
 function setupDropTarget(dropTarget, callbacks) {
@@ -154,7 +154,7 @@ function setupDropTarget(dropTarget, callbacks) {
 	});
 }
 
-export function setupFileLoading({ fileInput, openMenuItem, dropTarget, onImageLoaded, onBitmapLoaded }) {
+export function setupFileLoading({ fileInput, openMenuItem, dropTarget, onImageLoaded, onBitmapLoaded, onError }) {
 	if (!fileInput || typeof onImageLoaded !== 'function') {
 		return;
 	}
@@ -165,7 +165,13 @@ export function setupFileLoading({ fileInput, openMenuItem, dropTarget, onImageL
 		});
 	}
 
-	setupDropTarget(dropTarget, { onImageLoaded, onBitmapLoaded });
+	const callbacks = {
+		onImageLoaded,
+		onBitmapLoaded,
+		onError: typeof onError === 'function' ? onError : lines => window.alert(lines.join(' '))
+	};
+
+	setupDropTarget(dropTarget, callbacks);
 
 	fileInput.addEventListener('change', function() {
 		const file = getFirstFile(fileInput.files);
@@ -173,7 +179,7 @@ export function setupFileLoading({ fileInput, openMenuItem, dropTarget, onImageL
 			return;
 		}
 
-		loadFile(file, { onImageLoaded, onBitmapLoaded });
+		loadFile(file, callbacks);
 		fileInput.value = '';
 	});
 }

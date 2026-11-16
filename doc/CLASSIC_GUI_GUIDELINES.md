@@ -21,10 +21,9 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 2.2 Borders and Relief
 
-- Classic GEM and 1-bit Mac chrome is flat: 1px/2px black outlines, no 3D bevels.
-- Pressed, selected and active states are shown by inversion (black fill, white content), not by relief.
-- Menus and dialogs may carry a hard, unblurred 2-4px black drop shadow; the default dialog button gets an extra outline ring.
-- Keep outline weights consistent across all panels and controls.
+- GEM Draw uses flat 1px black outlines rather than bevels; selected or pressed controls are shown inverted.
+- Keep outline weight consistent across all panels and controls.
+- Menus and dialogs may carry a hard, unblurred black drop shadow; never a blurred one.
 
 ### 2.3 Typography
 
@@ -36,8 +35,8 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 3.1 Main Window
 
-- Keep title bar with classic affordances: close box, title text on a white plate over horizontal stripes, full-size gadget.
-- Keep tool palette, canvas window, and pattern panel visually separated by outlines.
+- Keep title bar with classic affordances: close box, title text, full-size gadget.
+- Follow the GEM Draw Plus 2.0 layout: the toolbox is a fixed panel on the left of the desktop, separate from the drawing window; patterns and line widths live in the `Pattern` and `Line` menus rather than in side panels.
 - Avoid floating translucent overlays except explicit modal dialogs.
 
 ### 3.2 Canvas Area
@@ -53,7 +52,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 4.1 Menu Bar Structure
 
-- Top-level menus should remain short and stable (Desk, File, Edit/Options, Block, Color, etc.).
+- Top-level menus follow GEM Draw Plus: `Desk`, `File`, `Modify`, `Line`, `Pattern`, `Color`.
 - Keep menu order stable across releases.
 - Do not hide core commands in secondary overflow menus.
 
@@ -67,7 +66,9 @@ It is intentionally strict to keep the interface coherent and period-correct.
 ### 4.3 Menu Behavior
 
 - A dropdown must sit flush against its menu title (no gap) so the pointer never leaves the menu while moving into it.
-- Menus drop down on mouse-over (as in GEM) and also on click; they close when the pointer leaves the bar, on outside click, on Esc, or on command activation.
+- Menus drop down as soon as the pointer touches a title (GEM AES behavior); moving onto another title switches menus. A tap opens a menu on touch screens.
+- An open menu closes on command activation or on a click elsewhere; that click is consumed and never reaches the canvas.
+- Menu entries are highlighted by inverting them; separators are dashed disabled rows; check marks sit in a column left of the label; shortcuts use the GEM `^O` notation.
 - Disabled items remain visible but inactive (never removed).
 - Checked/toggled items must have an explicit check mark in the reserved left column. Use a single check glyph only; no other decorative symbols.
 - Disabled entries are dithered, not gray.
@@ -81,6 +82,9 @@ It is intentionally strict to keep the interface coherent and period-correct.
 - Dialog titles and button captions must be action-specific and plain English.
 - Keep default action obvious; map Enter to default and Esc to cancel where possible.
 - Focus first actionable control when dialog opens.
+- GEM forms and alerts have no title bar: a white box with a thick black frame and a solid drop shadow, centred on screen. Clicks outside a form are ignored.
+- The default button has a thicker frame than the other exit buttons.
+- Alerts follow `form_alert`: a note, question or stop icon, short lines of text, one to three buttons.
 
 ### 5.2 Confirmations
 

@@ -6,16 +6,17 @@ Try it online: [https://painter.anides.de/](https://painter.anides.de/)
 
 ![Spectrum 512 Painter UI screenshot](./screenshot.png)
 
-## Current State (September 3, 2026)
+## Current State (November 12, 2026)
 
-The project is actively usable for painting and Spectrum 512 conversion work.
+The project is actively usable for painting and Spectrum 512 conversion work. The user interface follows GEM Draw Plus 2.0 (Digital Research, 1986): its menu bar, toolbox, magnification box, drop-down behavior, forms and alert boxes.
 
 ### Implemented
 
 - File I/O
   - Open: `.SPU`, `.IMG` (including XIMG palette blocks), and common browser image formats.
-  - Load sources either from `File -> Open...` or by dragging a file onto the canvas window.
-  - Save and Save As: `.SPU`.
+  - Load sources either from `File -> Open...` (`Ctrl/Cmd+O`) or by dragging a file onto the canvas window.
+  - `File -> New` starts a blank picture after a confirmation alert.
+  - Save (`Ctrl/Cmd+S`) and Save as: `.SPU`.
   - Export: `.PNG`.
 - GEM IMG decoding
   - Indexed planes: `1..8`.
@@ -25,17 +26,15 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - Toggle: `Color -> Spectrum 512` (check mark = on).
   - Targets: `512 (ST)`, `4096 (STE)`, `32768 (STE Enhanced)`.
   - Dither presets: Checks (Error Pair), Floyd-Steinberg, Floyd-Steinberg (85%), Floyd-Steinberg (75%), Floyd-Steinberg (50%), False Floyd-Steinberg.
-  - Optimizer toggle: `Options -> Brute-Force` (check mark = on) (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
+  - Optimizer toggle: `Color -> Brute-Force On/Off` (refines the greedy per-line slot colors by coordinate descent; slower but closer to the source).
   - The Floyd-Steinberg presets carry quantization error downwards, so an edit reconverts every line below it. Checks dithers each pixel independently and repaints only the edited lines, which makes it the faster mode to paint in.
 - Canvas and viewport
   - Default document is a white `320x200` canvas.
   - GEM-style custom scrollbars (buttons, track paging, thumb drag, wheel scrolling).
   - Canvas window accepts drag-and-drop loading with GEM-style hover feedback.
   - In Spectrum mode, imported images are normalized to the Spectrum canvas size.
-  - Zoom tool button is a sticky toggle:
-    - enabled: `4x` display zoom.
-    - in Spectrum mode: zoom is applied on top of fit scaling (`fit scale x 4`).
-    - stays active when switching drawing tools, until toggled off.
+  - GEM Draw magnification box in the toolbox: `Full` fits the whole picture into the window (whole-number magnification when it fits, scaled down otherwise), plus fixed `1/2`, `1`, `2`, `4` and `8`.
+  - The area outside the picture is dithered so the page edges stay visible.
 - Active tools
   - `Pencil` (line-size aware solid-color draw, Shift-constrained line).
   - `Freehand` (pattern brush, line-size aware, Shift-constrained line).
@@ -47,22 +46,19 @@ The project is actively usable for painting and Spectrum 512 conversion work.
   - `Rectangle`, `Rounded Rectangle`, `Ellipse`, `Polygon` (outline and fill mode).
   - `Pie Slice` (outline).
 - Palette and paint controls
-  - 256-color GEM-style palette with foreground/background swatches.
-  - 38 pattern tiles (GEM Paint's 21 plus 17 added 8x8 ones); double-click a tile or use `Options -> Edit Pattern...` to edit it in a GEM-style dialog.
-  - Line size slider (`1..8`).
-  - Shape mode toggle (`FRAME` / `FILL`).
+  - 256-color palette with drawing/background color swatches in the toolbox.
+  - `Pattern` menu: 38 patterns as swatches (GEM Paint's 21 plus 17 added 8x8 ones). `None` draws shapes as outlines only; choosing a pattern fills shapes with it. `Modify -> Edit pattern...` edits the active pattern in a GEM form.
+  - `Line` menu: line widths `1..8`, drawn as samples with a check mark on the current width.
 - Selection and image commands
   - `Marquee` tool: drag to select a rectangle (dashed outline), click to deselect.
-  - `Block -> Select All` (`Ctrl/Cmd+A`) and `Block -> Deselect`.
-  - `File -> New` (`Ctrl/Cmd+N`) and `Block -> Clear Image` ask for confirmation in a GEM-style alert.
-  - `Block -> Flip Horizontal` (`Ctrl/Cmd+H`), `Flip Vertical` (`Ctrl/Cmd+J`), `Invert Colors` (`Ctrl/Cmd+I`), `Clear Image`: act on the selection if there is one, otherwise on the whole picture. All are undoable.
-- GEM look and feel
-  - Flat 1-bit chrome: striped title bars, hard menu shadows, dithered disabled entries, inverted pressed states.
-  - Menus drop down on hover and close when the pointer leaves the menu bar.
-  - Toggle entries show a check mark when on.
+  - `Modify -> Select all` (`Ctrl/Cmd+A`) and `Modify -> Deselect`.
+  - `Modify -> Flip horizontal` (`Ctrl/Cmd+H`), `Flip vertical` (`Ctrl/Cmd+J`), `Invert` (`Ctrl/Cmd+I`) and `Clear`: act on the selection if there is one, otherwise on the whole picture. All are undoable; clearing the whole picture asks first.
+- GEM behavior
+  - Menus drop down as soon as the pointer touches a title and stay down until a command is chosen or the user clicks elsewhere; that outside click only closes the menu.
+  - Forms and alert boxes are GEM-style: no title bar, a thick-framed default button for Return, Escape for the cancel button.
 - Editing history
   - Undo/Redo with a fixed history depth of `32` actions.
-  - Menu commands (`Options -> Undo`, `Options -> Redo`) and shortcuts (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`).
+  - Menu commands (`Modify -> Undo`, `Modify -> Redo`) and shortcuts (`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`).
   - History is cleared when a new file is opened.
   - Redo replay keeps 1:1 pixel copies crisp (no unintended smoothing artifacts) and avoids expensive session rebuilds during undo/redo cycling.
 
@@ -71,7 +67,6 @@ The project is actively usable for painting and Spectrum 512 conversion work.
 - Toolbox icon present but currently no-op: `Text`.
 - Selections cannot be moved, copied, cut or pasted yet; `Invert Selection` and `Crop to Selection` are disabled.
 - Many menu entries are placeholders (for example selection operations, palette load/save, image dialogs). Placeholder entries are disabled so they cannot be accidentally triggered.
-- Menu shortcut labels are mostly visual. Wired shortcuts: Undo/Redo, New, Select All, Flip Horizontal/Vertical and Invert Colors.
 
 ## Run Locally
 

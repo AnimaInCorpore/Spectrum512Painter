@@ -16,9 +16,10 @@
 		:root {
 			--white: #ffffff;
 			--black: #000000;
+			--disabled: #808080;
 			/* Classic GEM 50% dither pattern */
 			--dither-2x2: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAF0lEQVR4AWNkYGD4DwQMDP+BgIGB4T8ATNcI+TGhvfIAAAAASUVORK5CYII=');
-			--dither-4x4: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAI0lEQVR4AU3BgQ0AIAzDsLT//xyYNCTsAF48VfmVlYRRlso4ogkKAaUxHRYAAAAASUVORK5CYII=');
+			--toolbox-inner: 80px;
 		}
 
 		* { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,30 +30,30 @@
 			font-family: 'Atari ST', sans-serif;
 			font-size: 16px;
 			font-weight: normal;
-			line-height: 1;
+			line-height: 16px;
 			cursor: default;
 			image-rendering: pixelated;
 			-webkit-font-smoothing: none;
 			user-select: none;
 		}
 
-		/* ===== MENU BAR ===== */
+		button { font: inherit; color: inherit; }
+
+		/* ===== MENU BAR (GEM AES drop-down menus) ===== */
 		.gem-menubar {
 			height: 20px;
 			background: var(--white);
-			border-bottom: 2px solid var(--black);
+			border-bottom: 1px solid var(--black);
 			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			padding: 0 16px 0 8px;
-			letter-spacing: 0px;
+			align-items: stretch;
+			padding-left: 8px;
+			position: relative;
+			z-index: 50;
 		}
 
 		.menu-left {
 			display: flex;
 			height: 100%;
-			gap: 0;
-			position: relative;
 		}
 
 		.gem-menu {
@@ -62,17 +63,15 @@
 
 		.gem-menubar-item {
 			border: none;
-			background: transparent;
-			color: inherit;
-			font: inherit;
+			background: var(--white);
 			height: 100%;
-			padding: 0 6px;
+			padding: 0 8px;
 			display: flex;
 			align-items: center;
-			cursor: pointer;
+			cursor: default;
+			white-space: nowrap;
 		}
 
-		.gem-menubar-item:hover,
 		.gem-menu.open .gem-menubar-item {
 			background: var(--black);
 			color: var(--white);
@@ -81,309 +80,263 @@
 		.gem-dropdown {
 			display: none;
 			position: absolute;
-			top: 100%; /* flush with the menu title so the pointer never crosses a gap */
+			top: 19px;
 			left: 0;
-			min-width: 150px;
+			min-width: 128px;
 			width: max-content;
 			background: var(--white);
-			border: 2px solid var(--black);
-			z-index: 50;
-			padding: 0;
-			box-shadow: 2px 2px 0 var(--black);
+			border: 1px solid var(--black);
 		}
 
-		.gem-menu.open .gem-dropdown {
-			display: block;
-		}
+		.gem-menu.open .gem-dropdown { display: block; }
 
 		.gem-menu-entry {
 			border: none;
-			border-radius: 0;
-			background: transparent;
-			color: inherit;
-			font: inherit;
+			background: var(--white);
 			width: 100%;
-			height: 20px;
-			padding: 0 8px 0 20px;
+			height: 16px;
+			padding: 0 16px 0 16px;
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			text-align: left;
 			white-space: nowrap;
-			cursor: pointer;
-		}
-
-		.gem-menu-entry:hover {
-			background: var(--black);
-			color: var(--white);
-		}
-
-		/* Disabled entries are dithered, as in GEM */
-		.gem-menu-entry.disabled {
-			color: transparent;
-			background-image: var(--dither-2x2);
-			background-color: var(--white);
-			-webkit-background-clip: text;
-			background-clip: text;
 			cursor: default;
+			position: relative;
 		}
 
-		.gem-menu-entry.disabled:hover {
-			background-color: var(--white);
-			color: transparent;
+		/* GEM highlights a menu entry by inverting it. */
+		.gem-menu-entry:not(.disabled):hover { filter: invert(1); }
+
+		.gem-menu-entry.disabled { color: var(--disabled); }
+
+		.gem-menu-entry.checked::before {
+			content: '';
+			position: absolute;
+			left: 4px;
+			top: 0;
+			width: 8px;
+			height: 16px;
+			background-image: var(--gem-check-mark);
 		}
 
-		.gem-menu-entry.gem-menu-check { padding-left: 6px; white-space: pre; }
+		.gem-menu-shortcut { margin-left: 24px; }
 
+		/* GEM menus separate groups with a disabled row of dashes. */
 		.gem-menu-separator {
-			height: 2px;
-			margin: 0;
-			background-image: var(--dither-2x2);
-			background-color: var(--white);
-			border-top: 1px solid var(--black);
-			border-bottom: 1px solid var(--black);
-			height: 4px;
+			height: 16px;
+			background-image: repeating-linear-gradient(90deg, var(--disabled) 0 4px, transparent 4px 8px);
+			background-size: 100% 1px;
+			background-position: 0 8px;
+			background-repeat: no-repeat;
 		}
 
-		.gem-menu-shortcut {
-			font-family: 'Atari ST', sans-serif;
-			font-size: 16px;
-			margin-left: 14px;
+		/* Line menu: drawn width samples. */
+		.gem-line-width-entry { width: 128px; justify-content: flex-start; }
+		.gem-line-sample {
+			display: block;
+			width: 88px;
+			background: var(--black);
 		}
 
-		.menu-right {
-			font-family: 'Atari ST', sans-serif;
-			font-weight: normal;
-			letter-spacing: 0px;
-		}
-
-		/* ===== MAIN WINDOW ===== */
-		.gem-desktop {
-			height: calc(100vh - 20px);
+		/* Pattern menu: swatches in columns, like GEM Draw. */
+		.gem-pattern-dropdown {
 			padding: 0;
-			display: flex;
 		}
-
-		.gem-window {
-			background: var(--white);
-			border-left: 2px solid var(--black);
-			border-right: 2px solid var(--black);
-			border-bottom: 2px solid var(--black);
-			width: 100%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-		}
-
-		/* Title bar */
-		.gem-titlebar {
-			height: 20px;
-			border-bottom: 2px solid var(--black);
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			background-color: var(--white);
-			background-image: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, var(--white) 1px, var(--white) 3px);
-			background-size: 100% 12px;
-			background-position: 0 4px;
-			background-repeat: no-repeat;
-		}
-
-		.gem-titlebar-close {
-			width: 20px;
-			height: 100%;
-			border-right: 2px solid var(--black);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			cursor: pointer;
-			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAVElEQVR4Aa3BMQKAMBDDMDv//3OAjYG2AyfZGz+FAWFA+KDyReVLGBAWVN5UVsKAsKHyUNkJByonYUA4aMtJ2GjLoy07YUBYaMtbW1bCAHvjpzDgAqm+Fx84B95wAAAAAElFTkSuQmCC');
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-
-		.gem-titlebar-full {
-			width: 20px;
-			height: 100%;
-			border-left: 2px solid var(--black);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			cursor: pointer;
-			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAWElEQVR4Aa3BuQHDQBDEMHL673lkZQruCbyA/eFPYUAYEC5UbsKAcKDyUjkJA8KGypfKTlhQWVFZCQttWWnLSthoy1dbdsKAcNCWV1tOwoBw0ZabMCAMeACizRketd6XDgAAAABJRU5ErkJggg==');
-			background-repeat: no-repeat;
-			background-position: center;
-		}
-
-		.gem-titlebar-name {
-			font-family: 'Atari ST', sans-serif;
-			font-weight: normal;
-			font-size: 16px;
-			background: var(--white);
-			padding: 0 8px;
-			max-width: calc(100% - 100px);
-			overflow: hidden;
-			white-space: nowrap;
-			text-overflow: clip;
-		}
-		.gem-titlebar-name:empty { display: none; }
-		.gem-titlebar-close, .gem-titlebar-full { background-color: var(--white); }
-
-		/* ===== WORKSPACE GRID ===== */
-		.gem-workspace {
+		.gem-menu.open .gem-pattern-dropdown {
 			display: grid;
-			grid-template-columns: 105px 1fr 105px;
-			flex: 1;
-			min-height: 0;
+			grid-auto-flow: column;
+			grid-template-rows: repeat(8, 18px);
+		}
+		.gem-pattern-entry {
+			height: 18px;
+			width: 72px;
+			padding: 0 4px 0 16px;
+		}
+		.gem-pattern-swatch {
+			display: block;
+			width: 50px;
+			height: 16px;
+			border: 1px solid var(--black);
+			background-repeat: no-repeat;
+		}
+		.gem-pattern-swatch.none {
+			text-align: center;
+			line-height: 14px;
+			background: var(--white);
 		}
 
-		/* ===== LEFT PANEL (Tools) ===== */
-		.gem-tools-panel {
-			border-right: 2px solid var(--black);
+		/* ===== DESKTOP: toolbox beside the drawing window ===== */
+		.gem-desktop {
+			height: calc(100% - 20px);
+			display: flex;
 			background-color: var(--white);
 			background-image: var(--dither-2x2);
+		}
+
+		/* ===== TOOLBOX (GEM Draw Plus layout) ===== */
+		.gem-toolbox {
+			flex: 0 0 auto;
+			width: calc(var(--toolbox-inner) + 19px);
+			background: var(--white);
+			border-right: 1px solid var(--black);
+			padding: 16px 8px;
 			display: flex;
 			flex-direction: column;
-			padding: 4px;
-			gap: 4px;
+			align-items: center;
+			gap: 16px;
 			overflow-y: auto;
+			overflow-x: hidden;
 		}
 
 		.gem-tools-grid {
 			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			background: var(--white);
+			grid-template-columns: repeat(2, calc(var(--toolbox-inner) / 2));
+			grid-auto-rows: 32px;
 			border: 1px solid var(--black);
+			background: var(--white);
+			flex: 0 0 auto;
 		}
 
 		.gem-tool-btn {
-			height: 31px;
-			border-right: 1px solid var(--black);
-			border-bottom: 1px solid var(--black);
+			border: none;
 			background: var(--white);
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			cursor: pointer;
 			padding: 0;
-			overflow: hidden;
 		}
-		
-		.gem-tool-btn:nth-child(3n) { border-right: none; }
-		.gem-tool-btn:nth-last-child(-n+3) { border-bottom: none; }
 
-		.gem-tool-btn:active,
+		.gem-tool-icon,
+		.gem-magnification-icon {
+			display: block;
+			background-repeat: no-repeat;
+			image-rendering: pixelated;
+		}
+
 		.gem-tool-btn.active { background: var(--black); }
-		.gem-tool-btn:active .gem-sprite { filter: invert(1); }
-		.gem-tool-btn.active .gem-sprite { filter: invert(1); }
+		.gem-tool-btn.active .gem-tool-icon { filter: invert(1); }
 
-		/* The Fill tile is baked into the sprite sheet as selected (inverted); normalize it. */
-		.gem-tool-btn[data-tool="fill"] .gem-sprite { filter: invert(1); }
-		.gem-tool-btn[data-tool="fill"].active .gem-sprite,
-		.gem-tool-btn[data-tool="fill"]:active .gem-sprite { filter: none; }
-
-		.gem-tool-btn svg { width: 18px; height: 18px; }
-
-		/* Fore/Background Colors */
-		.gem-color-block {
-			height: 36px;
-			border: 1px solid var(--black);
+		.gem-zoom-group {
+			width: calc(var(--toolbox-inner) + 2px);
+			flex: 0 0 auto;
 			display: flex;
 			flex-direction: column;
 		}
-		.gem-color-block-top { flex: 1; background: var(--white); border-bottom: 1px solid var(--black); }
-		.gem-color-block-bottom { flex: 1; background: var(--black); }
+
+		.gem-magnification {
+			border: 1px solid var(--black);
+			border-bottom: none;
+			height: 24px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.gem-zoom-box {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			grid-auto-rows: 18px;
+			border: 1px solid var(--black);
+			gap: 1px;
+			background: var(--black);
+		}
+
+		.gem-zoom-btn {
+			border: none;
+			background: var(--white);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			padding: 0;
+		}
+		.gem-zoom-btn.wide { grid-column: span 2; }
+		.gem-zoom-btn.active { background: var(--black); color: var(--white); }
+
+		.gem-color-group {
+			width: calc(var(--toolbox-inner) + 2px);
+			flex: 0 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.gem-color-block {
+			height: 32px;
+			border: 1px solid var(--black);
+			display: flex;
+		}
+		.gem-color-block-top { flex: 1; background: var(--black); border-right: 1px solid var(--black); }
+		.gem-color-block-bottom { flex: 1; background: var(--white); }
 
 		.gem-color-palette {
-			height: 144px;
+			width: calc(var(--toolbox-inner) + 2px);
+			height: calc(var(--toolbox-inner) + 2px);
 			border: 1px solid var(--black);
 			background: var(--white);
 			display: grid;
-			grid-template-columns: repeat(16, minmax(0, 1fr));
+			grid-template-columns: repeat(16, 1fr);
 			grid-template-rows: repeat(16, 1fr);
-			gap: 0;
-			padding: 0;
 			overflow: hidden;
 		}
 
 		.gem-color-tile {
 			border: 0;
 			padding: 0;
-			margin: 0;
 			cursor: pointer;
 			min-width: 0;
 			min-height: 0;
 			display: block;
 		}
+		.gem-color-tile-fill { display: block; width: 100%; height: 100%; }
+		.gem-color-tile.active { outline: 1px solid var(--white); outline-offset: -1px; }
 
-		.gem-color-tile-fill {
-			display: block;
-			width: 100%;
-			height: 100%;
-		}
-
-		.gem-color-tile.active {
-			outline: 1px solid var(--white);
-			outline-offset: -2px;
-			box-shadow: inset 0 0 0 1px var(--black);
-		}
-
-		/* Slider */
-		.gem-slider-container {
+		/* ===== DRAWING WINDOW ===== */
+		.gem-window {
+			flex: 1;
+			min-width: 0;
 			background: var(--white);
-			border: 1px solid var(--black);
-			padding: 6px;
 			display: flex;
+			flex-direction: column;
+		}
+
+		.gem-titlebar {
+			height: 20px;
+			border-bottom: 1px solid var(--black);
+			display: flex;
+			align-items: center;
 			justify-content: space-between;
-			align-items: flex-end;
-			height: 80px;
+			background: var(--white);
+			flex: 0 0 auto;
 		}
 
-		.gem-slider-track-wrap {
-			display: flex;
+		.gem-titlebar-close,
+		.gem-titlebar-full {
+			width: 20px;
 			height: 100%;
-		}
-
-		.gem-slider-track {
-			width: 12px;
-			height: 100%;
-			border: 1px solid var(--black);
-			position: relative;
-		}
-
-		.gem-slider-thumb {
-			position: absolute;
-			top: 10%;
-			left: -3px;
-			width: 17px;
-			height: 17px;
-			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAjUlEQVR4Aa3BAWqDUBQAwd2P97/yNg8UpCQ0WmfsReWKirONXcU3VH5bPGDjA5VR8YnK2PiHirF4wMZO5R2Vv2wqFd9QeWdxQcVQOVtcVDFUDoudylAZKkNlqAyViqFyCGgADaABNIAG0AACAhqLlwqVCpUKlQqVCpUKlYozgbipYixuqjgsbqg4WzzgB0ogYQ2tsq/VAAAAAElFTkSuQmCC');
 			background-repeat: no-repeat;
 			background-position: center;
 			cursor: pointer;
 		}
 
-		.gem-slider-ticks {
-			width: 8px;
-			height: 100%;
+		.gem-titlebar-close {
 			border-right: 1px solid var(--black);
-			background: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, transparent 1px, transparent 4px);
-			margin-left: 2px;
+			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAVElEQVR4Aa3BMQKAMBDDMDv//3OAjYG2AyfZGz+FAWFA+KDyReVLGBAWVN5UVsKAsKHyUNkJByonYUA4aMtJ2GjLoy07YUBYaMtbW1bCAHvjpzDgAqm+Fx84B95wAAAAAElFTkSuQmCC');
 		}
 
-		.gem-slider-value {
-			border: 1px solid var(--black);
-			padding: 2px 6px;
-			font-family: 'Atari ST', sans-serif;
-			font-size: 16px;
-			height: 20px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+		.gem-titlebar-full {
+			border-left: 1px solid var(--black);
+			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAWElEQVR4Aa3BuQHDQBDEMHL673lkZQruCbyA/eFPYUAYEC5UbsKAcKDyUjkJA8KGypfKTlhQWVFZCQttWWnLSthoy1dbdsKAcNCWV1tOwoBw0ZabMCAMeACizRketd6XDgAAAABJRU5ErkJggg==');
 		}
 
-		/* ===== CENTER PANEL (Canvas & Scrollbars) ===== */
+		.gem-titlebar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px; }
+
+		/* ===== CANVAS AREA & SCROLLBARS ===== */
 		.gem-canvas-area {
+			flex: 1;
+			min-height: 0;
 			display: grid;
 			grid-template-columns: 1fr 0;
 			grid-template-rows: 1fr 0;
@@ -391,9 +344,7 @@
 		}
 		.gem-canvas-area.show-vertical-scrollbar { grid-template-columns: 1fr 17px; }
 		.gem-canvas-area.show-horizontal-scrollbar { grid-template-rows: 1fr 17px; }
-		.gem-canvas-area.drag-active .gem-canvas-container {
-			background-color: #d7d7d7;
-		}
+		.gem-canvas-area.drag-active .gem-canvas-container { background-color: #d7d7d7; }
 		.gem-canvas-area.drag-active .gem-canvas-container::before {
 			content: '';
 			position: absolute;
@@ -405,7 +356,7 @@
 			z-index: 2;
 		}
 		.gem-canvas-area.drag-active .gem-canvas-container::after {
-			content: 'DROP PICTURE TO OPEN';
+			content: 'Drop picture to open';
 			position: absolute;
 			top: 50%;
 			left: 50%;
@@ -413,24 +364,21 @@
 			padding: 4px 10px;
 			border: 1px solid var(--black);
 			background: var(--white);
-			font-family: 'Atari ST', sans-serif;
-			font-size: 16px;
-			letter-spacing: 0.03em;
 			white-space: nowrap;
 			pointer-events: none;
 			z-index: 3;
 		}
-		.gem-canvas-area.drag-active #paint {
-			opacity: 0.2;
-		}
+		.gem-canvas-area.drag-active #paint { opacity: 0.2; }
 
+		/* The area outside the picture is dithered so the page edges stay visible. */
 		.gem-canvas-container {
-			border-right: 2px solid var(--black);
-			border-bottom: 2px solid var(--black);
-			background: var(--white);
+			background-color: var(--white);
+			background-image: var(--dither-2x2);
 			position: relative;
 			overflow: hidden;
 		}
+		.gem-canvas-area.show-vertical-scrollbar .gem-canvas-container { border-right: 1px solid var(--black); }
+		.gem-canvas-area.show-horizontal-scrollbar .gem-canvas-container { border-bottom: 1px solid var(--black); }
 
 		#paint {
 			position: absolute;
@@ -443,57 +391,28 @@
 			max-height: none;
 		}
 
-		/* Scrollbars */
-		.gem-scrollbar {
-			background: var(--white);
-			display: none;
-		}
+		.gem-scrollbar { background: var(--white); display: none; }
 		.gem-canvas-area.show-vertical-scrollbar .gem-scrollbar.vertical { display: flex; }
 		.gem-canvas-area.show-horizontal-scrollbar .gem-scrollbar.horizontal { display: flex; }
+		.gem-scrollbar.vertical { flex-direction: column; }
 
-		.gem-scrollbar.vertical {
-			flex-direction: column;
-			border-bottom: 2px solid var(--black);
-		}
-
-		.gem-scrollbar.horizontal {
-			border-right: 2px solid var(--black);
-		}
-
-		.gem-sb-btn:active { filter: invert(1); }
 		.gem-sb-btn {
 			width: 17px;
 			height: 17px;
+			flex: 0 0 auto;
 			background: var(--white);
-			display: flex;
-			align-items: center;
-			justify-content: center;
 			background-repeat: no-repeat;
 			background-position: center;
 			cursor: pointer;
 			position: relative;
 		}
-
 		.gem-sb-btn.up { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAATElEQVR4Aa3BQQ5AUBQEwe6J+1/5YWfxETFVzoGfQkEoCAWhILxQeRMeqJxUnoQbKlcqd8KCyorKysbCzPBFKAgFoSAUhIJQIDD8tAM3qQgwEU8w/gAAAABJRU5ErkJggg=='); }
 		.gem-sb-btn.down { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAATElEQVR4Aa3BwQ2AMADDQDdi/5UN/BBqy4PcDS/8FApCQSgIBaHgYGKMwYrKW5hQmVGZCQsqTyorYUPlprITPqh8CQWhIBSEglAQCk4+MBwLuZlzIAAAAABJRU5ErkJggg=='); }
 		.gem-sb-btn.left { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAT0lEQVR4Aa3BgRGAMAwDsbf339kwAE3SI5Ly4iezwCwwC8wFSXwxQ5I4MQOSqJiGJDqmIIkJU0jChGkkoWMGklAxQ0k4MReS8MUsMAvMggeovxMeTG6MrQAAAABJRU5ErkJggg=='); }
 		.gem-sb-btn.right { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAATklEQVR4Aa3BgREDQQwCsYX+eSZp4Gxm3pLyx0fmgDlgDpgHSbTMQBINs5DExhQkMTElSbyYUhJeTCEJE7NIwsYMktAwD0lomQPmgDnwA+S/Ex4GFe59AAAAAElFTkSuQmCC'); }
-		.gem-sb-btn.right::before {
-			content: '';
-			position: absolute;
-			width: 0;
-			height: 0;
-			border-top: 3px solid transparent;
-			border-bottom: 3px solid transparent;
-			border-left: 5px solid var(--black);
-		}
 
-		.gem-sb-track {
-			flex: 1;
-			position: relative;
-			display: flex;
-			overflow: hidden;
-		}
+		.gem-sb-track { flex: 1; position: relative; display: flex; overflow: hidden; }
+		.gem-scrollbar.vertical .gem-sb-track { flex-direction: column; }
 
 		.gem-sb-track-dither {
 			position: absolute;
@@ -504,192 +423,95 @@
 			z-index: 0;
 		}
 
-		.gem-sb-thumb:active { background: var(--black); }
 		.gem-sb-thumb {
 			position: absolute;
 			background: var(--white);
 			border: 1px solid var(--black);
 			z-index: 1;
 		}
-		
-		.gem-scrollbar.vertical .gem-sb-thumb { top: 0; left: 2px; right: 2px; height: 60px; }
-		.gem-scrollbar.vertical .gem-sb-track { flex-direction: column; }
+		.gem-scrollbar.vertical .gem-sb-thumb { top: 0; left: 1px; right: 1px; height: 60px; }
+		.gem-scrollbar.horizontal .gem-sb-thumb { top: 1px; left: 0; bottom: 1px; width: 80px; }
 
-		.gem-scrollbar.horizontal .gem-sb-thumb { top: 2px; left: 0; bottom: 2px; width: 80px; }
-
-		.gem-sb-corner { 
+		.gem-sb-corner {
 			width: 17px;
 			height: 17px;
-			background: var(--white); 
+			background: var(--white);
 			display: none;
-			align-items: flex-end;
-			justify-content: flex-end;
 			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAATklEQVR4Aa3BwQ2AMAADsUvU/VcOPBFqKYjYyomfTIEpGExI4i4JK6bAFJgCU2AKTIH5QBIzg4kkXEniiXkhCZJYGWxIYmewkYQdU2AKDqz1ECnYW1chAAAAAElFTkSuQmCC');
 			background-repeat: no-repeat;
 			background-position: center;
 		}
-		.gem-canvas-area.show-horizontal-scrollbar.show-vertical-scrollbar .gem-sb-corner { display: flex; }
+		.gem-canvas-area.show-horizontal-scrollbar.show-vertical-scrollbar .gem-sb-corner { display: block; }
 
-		/* ===== RIGHT PANEL (Patterns) ===== */
-		.gem-right-panel {
-			border-left: 2px solid var(--black);
-			background-color: var(--white);
-			background-image: var(--dither-2x2);
-			display: flex;
-			flex-direction: column;
-			padding: 4px;
-			gap: 4px;
-			overflow-y: auto;
-		}
-
-		.gem-preview-container {
-			background: var(--white);
-			border: 1px solid var(--black);
-			display: flex;
-			flex-direction: column;
-		}
-
-		.gem-preview-box {
-			height: 38px;
-			background: var(--black);
-			margin: 4px;
-			border: 1px solid var(--black);
-		}
-
-		.gem-preview-text {
-			font-size: 16px;
-			text-align: center;
-			border-top: 1px solid var(--black);
-			padding: 2px 0;
-			font-family: 'Atari ST', sans-serif;
-			font-weight: normal;
-		}
-
-		.gem-patterns {
-			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			background: var(--white);
-			border: 1px solid var(--black);
-		}
-
-		.gem-pattern {
-			height: 31px;
-			border-right: 1px solid var(--black);
-			border-bottom: 1px solid var(--black);
-			cursor: pointer;
-			image-rendering: pixelated;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			overflow: hidden;
-		}
-
-		.gem-pattern:nth-child(3n) { border-right: none; }
-		.gem-pattern:nth-last-child(-n+3) { border-bottom: none; }
-
-		.gem-pattern.active {
-			outline: 2px solid var(--black);
-			outline-offset: -3px;
-		}
-
-		
-
-		/* About dialog */
-		.gem-about-overlay {
-			display: none;
+		/* ===== GEM FORMS AND ALERTS ===== */
+		.gem-form-overlay {
 			position: fixed;
 			inset: 0;
 			z-index: 1000;
+			display: flex;
 			align-items: center;
 			justify-content: center;
 		}
-		.gem-about-overlay.open {
-			display: flex;
+
+		.gem-form {
+			background: var(--white);
+			border: 3px solid var(--black);
+			box-shadow: 4px 4px 0 0 var(--black);
+			padding: 16px;
+			max-width: calc(100vw - 32px);
 		}
-		.gem-about-dialog {
+
+		.gem-form-buttons {
+			display: flex;
+			justify-content: flex-end;
+			gap: 16px;
+			margin-top: 16px;
+		}
+
+		.gem-button {
+			min-width: 64px;
+			height: 24px;
+			padding: 0 12px;
 			background: var(--white);
 			border: 2px solid var(--black);
-			width: 340px;
+			cursor: pointer;
+		}
+		.gem-button.default { border-width: 3px; }
+		.gem-button:active { background: var(--black); color: var(--white); }
+		.gem-button:focus { outline: none; }
+		.gem-button:focus-visible { outline: 1px dotted var(--black); outline-offset: 2px; }
+
+		.gem-alert-body {
+			display: flex;
+			align-items: flex-start;
+			gap: 16px;
+		}
+		.gem-alert-icon { flex: 0 0 auto; background-repeat: no-repeat; }
+		.gem-alert-text { padding-top: 0; }
+		.gem-alert-text div { min-height: 16px; white-space: pre; }
+
+		.gem-info-box { width: 448px; }
+		.gem-info-body {
 			display: flex;
 			flex-direction: column;
-			outline: 1px solid var(--black);
-			outline-offset: 2px;
-			box-shadow: 4px 4px 0 var(--black);
-		}
-		.gem-about-titlebar {
-			height: 20px;
-			border-bottom: 2px solid var(--black);
-			display: flex;
 			align-items: center;
-			background-color: var(--white);
-			background-image: repeating-linear-gradient(180deg, var(--black) 0, var(--black) 1px, var(--white) 1px, var(--white) 3px);
-			background-size: 100% 12px;
-			background-position: 0 4px;
-			background-repeat: no-repeat;
-		}
-		.gem-about-titlebar-close {
-			width: 20px;
-			height: 100%;
-			border-right: 2px solid var(--black);
-			flex-shrink: 0;
-			cursor: pointer;
-			background-color: var(--white);
-			background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAVElEQVR4Aa3BMQKAMBDDMDv//3OAjYG2AyfZGz+FAWFA+KDyReVLGBAWVN5UVsKAsKHyUNkJByonYUA4aMtJ2GjLoy07YUBYaMtbW1bCAHvjpzDgAqm+Fx84B95wAAAAAElFTkSuQmCC');
-			background-repeat: no-repeat;
-			background-position: center;
-			border: none;
-		}
-		.gem-about-titlebar-name {
-			margin: 0 auto;
-			background: var(--white);
-			padding: 0 8px;
 			text-align: center;
-			font-family: 'Atari ST', sans-serif;
-			font-size: 16px;
+			gap: 16px;
 		}
-		.gem-about-body {
-			padding: 20px 20px 12px;
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-			font-size: 14px;
-			line-height: 1.4;
+		.gem-info-title {
+			font-size: 32px;
+			line-height: 32px;
 		}
-		.gem-about-body a {
-			color: var(--black);
-		}
-		.gem-about-body a:hover {
-			text-decoration: none;
-		}
-		.gem-about-footer {
-			padding: 8px 20px 20px;
-			display: flex;
-			justify-content: center;
-		}
-		.gem-about-ok {
-			background: var(--white);
-			color: var(--black);
-			border: 2px solid var(--black);
-			font-family: 'Atari ST', sans-serif;
-			font-size: 16px;
-			padding: 2px 24px;
-			cursor: pointer;
-			min-width: 80px;
-			border-radius: 0;
-			/* Default button: extra outline ring */
-			outline: 2px solid var(--black);
-			outline-offset: 1px;
-		}
-		.gem-about-ok:active {
+		.gem-info-body p { line-height: 16px; }
+		.gem-info-body a { color: var(--black); }
+		.gem-info-body a:hover { text-decoration: none; }
+		.gem-info-rule {
+			width: 100%;
+			height: 1px;
 			background: var(--black);
-			color: var(--white);
-		}
-		.gem-about-ok:hover {
-			background: var(--black);
-			color: var(--white);
 		}
 
-
+		/* Marquee selection: a dashed outline over the canvas. */
 		.gem-marquee {
 			position: absolute;
 			pointer-events: none;
@@ -699,7 +521,14 @@
 		}
 		.gem-marquee[hidden] { display: none; }
 
-		.gem-pattern-grid {
+		/* Edit pattern form: the pattern as an enlarged grid of cells. */
+		.gem-pattern-editor {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 16px;
+		}
+		.gem-pattern-editor-grid {
 			display: grid;
 			border-top: 1px solid var(--black);
 			border-left: 1px solid var(--black);
@@ -707,279 +536,173 @@
 			cursor: crosshair;
 		}
 		.gem-pattern-cell {
-			width: 16px;
-			height: 16px;
 			border-right: 1px solid var(--black);
 			border-bottom: 1px solid var(--black);
 			background: var(--white);
 		}
 		.gem-pattern-cell.on { background: var(--black); }
-
-		.gem-sprite {
-			background-image: url(data:image/png;base64,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);
-			background-repeat: no-repeat;
-			display: inline-block;
-			width: 31px;
-			height: 31px;
+		.gem-pattern-editor-tools {
+			display: flex;
+			gap: 16px;
 		}
-		/* Tools */
-		.tool-0-0 { background-position: -10px -56px; }
-		.tool-1-0 { background-position: -42px -56px; }
-		.tool-2-0 { background-position: -74px -56px; }
-		.tool-0-1 { background-position: -10px -88px; }
-		.tool-1-1 { background-position: -42px -88px; }
-		.tool-2-1 { background-position: -74px -88px; }
-		.tool-0-2 { background-position: -10px -120px; }
-		.tool-1-2 { background-position: -42px -120px; }
-		.tool-2-2 { background-position: -74px -120px; }
-		.tool-0-3 { background-position: -10px -152px; }
-		.tool-1-3 { background-position: -42px -152px; }
-		.tool-2-3 { background-position: -74px -152px; }
-		.tool-0-4 { background-position: -10px -184px; }
-		.tool-1-4 { background-position: -42px -184px; }
-		.tool-2-4 { background-position: -74px -184px; }
-
-		/* Patterns */
-		.pat-0-0 { background-position: -505px -126px; }
-		.pat-1-0 { background-position: -537px -126px; }
-		.pat-2-0 { background-position: -569px -126px; }
-		.pat-0-1 { background-position: -505px -158px; }
-		.pat-1-1 { background-position: -537px -158px; }
-		.pat-2-1 { background-position: -569px -158px; }
-		.pat-0-2 { background-position: -505px -190px; }
-		.pat-1-2 { background-position: -537px -190px; }
-		.pat-2-2 { background-position: -569px -190px; }
-		.pat-0-3 { background-position: -505px -222px; }
-		.pat-1-3 { background-position: -537px -222px; }
-		.pat-2-3 { background-position: -569px -222px; }
-		.pat-0-4 { background-position: -505px -254px; }
-		.pat-1-4 { background-position: -537px -254px; }
-		.pat-2-4 { background-position: -569px -254px; }
-		.pat-0-5 { background-position: -505px -286px; }
-		.pat-1-5 { background-position: -537px -286px; }
-		.pat-2-5 { background-position: -569px -286px; }
-		.pat-0-6 { background-position: -505px -318px; }
-		.pat-1-6 { background-position: -537px -318px; }
-		.pat-2-6 { background-position: -569px -318px; }
-
 	</style>
 </head>
 <body>
 
 	<div class="gem-menubar">
-		<div class="menu-left">
+		<div class="menu-left" role="menubar">
 			<div class="gem-menu">
 				<button type="button" class="gem-menubar-item">Desk</button>
-				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry" id="menu-desk-about">About Spectrum 512 Painter...</button>
-					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry disabled">Desktop Info</button>
+				<div class="gem-dropdown" role="menu">
+					<button type="button" class="gem-menu-entry" id="menu-desk-about"><span class="gem-menu-label">Painter info...</span></button>
 				</div>
 			</div>
 			<div class="gem-menu">
 				<button type="button" class="gem-menubar-item">File</button>
-				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry" id="menu-file-new"><span>New</span><span class="gem-menu-shortcut">Ctrl+N</span></button>
-					<button type="button" class="gem-menu-entry" id="menu-file-open"><span>Open...</span><span class="gem-menu-shortcut">O</span></button>
-					<button type="button" class="gem-menu-entry disabled"><span>Merge...</span><span class="gem-menu-shortcut">M</span></button>
+				<div class="gem-dropdown" role="menu">
+					<button type="button" class="gem-menu-entry" id="menu-file-new"><span class="gem-menu-label">New</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-file-open"><span class="gem-menu-label">Open...</span><span class="gem-menu-shortcut">^O</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry" id="menu-file-save"><span>Save</span><span class="gem-menu-shortcut">S</span></button>
-					<button type="button" class="gem-menu-entry" id="menu-file-save-as">Save As...</button>
-					<button type="button" class="gem-menu-entry" id="menu-file-export">Export...</button>
+					<button type="button" class="gem-menu-entry disabled"><span class="gem-menu-label">Close</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-file-save"><span class="gem-menu-label">Save</span><span class="gem-menu-shortcut">^S</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-file-save-as"><span class="gem-menu-label">Save as...</span></button>
+					<button type="button" class="gem-menu-entry disabled"><span class="gem-menu-label">Abandon</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry disabled">Quit</button>
+					<button type="button" class="gem-menu-entry" id="menu-file-export"><span class="gem-menu-label">Export...</span></button>
+					<button type="button" class="gem-menu-entry disabled"><span class="gem-menu-label">Quit</span></button>
 				</div>
 			</div>
 			<div class="gem-menu">
-				<button type="button" class="gem-menubar-item">Options</button>
-				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry disabled" id="menu-options-undo"><span>Undo</span><span class="gem-menu-shortcut">Z</span></button>
-					<button type="button" class="gem-menu-entry disabled" id="menu-options-redo"><span>Redo</span><span class="gem-menu-shortcut">Shift+Z</span></button>
-					<button type="button" class="gem-menu-entry disabled gem-menu-check">  Grid</button>
-					<button type="button" class="gem-menu-entry disabled gem-menu-check">  Transparent</button>
-					<button type="button" class="gem-menu-entry" id="menu-options-bruteforce">  Brute-Force</button>
+				<button type="button" class="gem-menubar-item">Modify</button>
+				<div class="gem-dropdown" role="menu">
+					<button type="button" class="gem-menu-entry disabled" id="menu-options-undo"><span class="gem-menu-label">Undo</span><span class="gem-menu-shortcut">^Z</span></button>
+					<button type="button" class="gem-menu-entry disabled" id="menu-options-redo"><span class="gem-menu-label">Redo</span><span class="gem-menu-shortcut">^Y</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry" id="menu-options-edit-pattern">Edit Pattern...</button>
-					<button type="button" class="gem-menu-entry disabled">Brush Shape...</button>
-					<button type="button" class="gem-menu-entry disabled">View Image...</button>
-					<button type="button" class="gem-menu-entry disabled">Image Size...</button>
+					<button type="button" class="gem-menu-entry" id="menu-block-flip-h"><span class="gem-menu-label">Flip horizontal</span><span class="gem-menu-shortcut">^H</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-block-flip-v"><span class="gem-menu-label">Flip vertical</span><span class="gem-menu-shortcut">^J</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-block-invert"><span class="gem-menu-label">Invert</span><span class="gem-menu-shortcut">^I</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-block-clear"><span class="gem-menu-label">Clear</span></button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry" id="menu-block-select-all"><span class="gem-menu-label">Select all</span><span class="gem-menu-shortcut">^A</span></button>
+					<button type="button" class="gem-menu-entry disabled" id="menu-block-deselect"><span class="gem-menu-label">Deselect</span></button>
+					<div class="gem-menu-separator"></div>
+					<button type="button" class="gem-menu-entry" id="menu-options-edit-pattern"><span class="gem-menu-label">Edit pattern...</span></button>
 				</div>
 			</div>
 			<div class="gem-menu">
-				<button type="button" class="gem-menubar-item">Block</button>
-				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry" id="menu-block-flip-h"><span>Flip Horizontal</span><span class="gem-menu-shortcut">Ctrl+H</span></button>
-					<button type="button" class="gem-menu-entry" id="menu-block-flip-v"><span>Flip Vertical</span><span class="gem-menu-shortcut">Ctrl+J</span></button>
-					<button type="button" class="gem-menu-entry" id="menu-block-invert"><span>Invert Colors</span><span class="gem-menu-shortcut">Ctrl+I</span></button>
-					<button type="button" class="gem-menu-entry" id="menu-block-clear">Clear Image</button>
-					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry" id="menu-block-select-all"><span>Select All</span><span class="gem-menu-shortcut">Ctrl+A</span></button>
-					<button type="button" class="gem-menu-entry disabled" id="menu-block-deselect">Deselect</button>
-					<button type="button" class="gem-menu-entry disabled">Invert Selection</button>
-					<button type="button" class="gem-menu-entry disabled">Crop to Selection</button>
-				</div>
+				<button type="button" class="gem-menubar-item">Line</button>
+				<div class="gem-dropdown" role="menu" id="menu-line-widths"></div>
+			</div>
+			<div class="gem-menu">
+				<button type="button" class="gem-menubar-item">Pattern</button>
+				<div class="gem-dropdown gem-pattern-dropdown" role="menu" id="menu-pattern-swatches"></div>
 			</div>
 			<div class="gem-menu">
 				<button type="button" class="gem-menubar-item">Color</button>
-				<div class="gem-dropdown">
-					<button type="button" class="gem-menu-entry" id="menu-color-spectrum512">✓ Spectrum 512</button>
+				<div class="gem-dropdown" role="menu">
+					<button type="button" class="gem-menu-entry" id="menu-color-spectrum512"><span class="gem-menu-label">Spectrum 512 On</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-options-bruteforce"><span class="gem-menu-label">Brute-Force Off</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry" id="menu-color-target-512">512 (ST)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-target-4096">4096 (STE)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-target-32768">32768 (STE Enhanced)</button>
+					<button type="button" class="gem-menu-entry" id="menu-color-target-512"><span class="gem-menu-label">512 (ST)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-target-4096"><span class="gem-menu-label">4096 (STE)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-target-32768"><span class="gem-menu-label">32768 (STE Enhanced)</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-checks">Checks (Error Pair)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs">Floyd-Steinberg</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-85">Floyd-Steinberg (85%)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-75">Floyd-Steinberg (75%)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-50">Floyd-Steinberg (50%)</button>
-					<button type="button" class="gem-menu-entry" id="menu-color-dither-false-fs">False Floyd-Steinberg</button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-checks"><span class="gem-menu-label">Checks (Error Pair)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs"><span class="gem-menu-label">Floyd-Steinberg</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-85"><span class="gem-menu-label">Floyd-Steinberg (85%)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-75"><span class="gem-menu-label">Floyd-Steinberg (75%)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-fs-50"><span class="gem-menu-label">Floyd-Steinberg (50%)</span></button>
+					<button type="button" class="gem-menu-entry" id="menu-color-dither-false-fs"><span class="gem-menu-label">False Floyd-Steinberg</span></button>
 					<div class="gem-menu-separator"></div>
-					<button type="button" class="gem-menu-entry disabled">Load Palette...</button>
-					<button type="button" class="gem-menu-entry disabled">Save Palette...</button>
+					<button type="button" class="gem-menu-entry disabled"><span class="gem-menu-label">Load palette...</span></button>
+					<button type="button" class="gem-menu-entry disabled"><span class="gem-menu-label">Save palette...</span></button>
 				</div>
 			</div>
 		</div>
-		<div class="menu-right">SPECTRUM 512 PAINTER</div>
 	</div>
 
 	<div class="gem-desktop">
-		<div class="gem-window">
+		<div class="gem-toolbox">
+			<div class="gem-tools-grid" role="toolbar" aria-label="Tools">
+				<button type="button" class="gem-tool-btn" data-tool="freehand" title="Freehand"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="ellipse" title="Ellipse"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="pie-slice" title="Pie Slice"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="polygon" title="Polygon"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="rounded-rectangle" title="Rounded Rectangle"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="line" title="Line"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="text" title="Text"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="rectangle" title="Rectangle"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="marquee" title="Marquee"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="faucet" title="Pick Up Color"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn active" data-tool="pencil" title="Pencil"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="eraser" title="Eraser"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="fill" title="Fill"><span class="gem-tool-icon"></span></button>
+				<button type="button" class="gem-tool-btn" data-tool="spray" title="Spray"><span class="gem-tool-icon"></span></button>
+			</div>
 
+			<div class="gem-zoom-group" role="group" aria-label="Magnification">
+				<div class="gem-magnification"><span class="gem-magnification-icon"></span></div>
+				<div class="gem-zoom-box">
+					<button type="button" class="gem-zoom-btn wide" data-zoom="full">Full</button>
+					<button type="button" class="gem-zoom-btn wide" data-zoom="0.5">1/2</button>
+					<button type="button" class="gem-zoom-btn" data-zoom="1">1</button>
+					<button type="button" class="gem-zoom-btn" data-zoom="2">2</button>
+					<button type="button" class="gem-zoom-btn" data-zoom="4">4</button>
+					<button type="button" class="gem-zoom-btn" data-zoom="8">8</button>
+				</div>
+			</div>
+
+			<div class="gem-color-group">
+				<div class="gem-color-block" title="Drawing color (left) and background color (right)">
+					<div class="gem-color-block-top" id="color-foreground"></div>
+					<div class="gem-color-block-bottom" id="color-background"></div>
+				</div>
+				<div class="gem-color-palette" id="color-grid"></div>
+			</div>
+		</div>
+
+		<div class="gem-window">
 			<div class="gem-titlebar">
 				<div class="gem-titlebar-close"></div>
 				<div class="gem-titlebar-name"></div>
 				<div class="gem-titlebar-full"></div>
 			</div>
 
-			<div class="gem-workspace">
-				<div class="gem-tools-panel">
-					<div class="gem-tools-grid">
-						
-						<button class="gem-tool-btn" data-tool="zoom" title="Microscope (Zoom)"><div class="gem-sprite tool-0-0"></div></button>
-						<button class="gem-tool-btn" data-tool="marquee" title="Marquee"><div class="gem-sprite tool-1-0"></div></button>
-						<button class="gem-tool-btn" data-tool="text" title="Text"><div class="gem-sprite tool-2-0"></div></button>
-
-						<button class="gem-tool-btn active" data-tool="pencil" title="Pencil"><div class="gem-sprite tool-0-1"></div></button>
-						<button class="gem-tool-btn" data-tool="eraser" title="Eraser"><div class="gem-sprite tool-1-1"></div></button>
-						<button class="gem-tool-btn" data-tool="line" title="Line"><div class="gem-sprite tool-2-1"></div></button>
-
-						<button class="gem-tool-btn" data-tool="fill" title="Fill"><div class="gem-sprite tool-0-2"></div></button>
-						<button class="gem-tool-btn" data-tool="spray" title="Spray"><div class="gem-sprite tool-1-2"></div></button>
-						<button class="gem-tool-btn" data-tool="faucet" title="Faucet"><div class="gem-sprite tool-2-2"></div></button>
-
-						<button class="gem-tool-btn" data-tool="rectangle" title="Rectangle"><div class="gem-sprite tool-0-3"></div></button>
-						<button class="gem-tool-btn" data-tool="rounded-rectangle" title="Rounded Rectangle"><div class="gem-sprite tool-1-3"></div></button>
-						<button class="gem-tool-btn" data-tool="polygon" title="Polygon"><div class="gem-sprite tool-2-3"></div></button>
-
-						<button class="gem-tool-btn" data-tool="pie-slice" title="Pie Slice"><div class="gem-sprite tool-0-4"></div></button>
-						<button class="gem-tool-btn" data-tool="ellipse" title="Ellipse"><div class="gem-sprite tool-1-4"></div></button>
-						<button class="gem-tool-btn" data-tool="freehand" title="Freehand"><div class="gem-sprite tool-2-4"></div></button>
-
-					</div>
-
-					<div class="gem-color-block">
-						<div class="gem-color-block-top" id="color-foreground"></div>
-						<div class="gem-color-block-bottom" id="color-background"></div>
-					</div>
-					<div class="gem-color-palette" id="color-grid"></div>
-
-					<div class="gem-slider-container">
-						<div class="gem-slider-track-wrap">
-							<div class="gem-slider-track">
-								<div class="gem-slider-thumb"></div>
-							</div>
-							<div class="gem-slider-ticks"></div>
-						</div>
-						<div class="gem-slider-value">1</div>
-					</div>
+			<div class="gem-canvas-area">
+				<div class="gem-canvas-container">
+					<canvas id="paint" width="320" height="200"></canvas>
 				</div>
-
-				<div class="gem-canvas-area">
-					<div class="gem-canvas-container">
-						<canvas id="paint" width="320" height="200"></canvas>
+				<div class="gem-scrollbar vertical">
+					<div class="gem-sb-btn up"></div>
+					<div class="gem-sb-track">
+						<div class="gem-sb-thumb"></div>
+						<div class="gem-sb-track-dither"></div>
 					</div>
-					<div class="gem-scrollbar vertical">
-						<div class="gem-sb-btn up"></div>
-						<div class="gem-sb-track">
-							<div class="gem-sb-thumb"></div>
-							<div class="gem-sb-track-dither"></div>
-						</div>
-						<div class="gem-sb-btn down"></div>
-					</div>
-					<div class="gem-scrollbar horizontal">
-						<div class="gem-sb-btn left"></div>
-						<div class="gem-sb-track">
-							<div class="gem-sb-thumb"></div>
-							<div class="gem-sb-track-dither"></div>
-						</div>
-						<div class="gem-sb-btn right"></div>
-					</div>
-					<div class="gem-sb-corner"></div>
+					<div class="gem-sb-btn down"></div>
 				</div>
-
-				<div class="gem-right-panel">
-					<div class="gem-preview-container">
-						<div class="gem-preview-box"></div>
-						<div class="gem-preview-text">FILL</div>
+				<div class="gem-scrollbar horizontal">
+					<div class="gem-sb-btn left"></div>
+					<div class="gem-sb-track">
+						<div class="gem-sb-thumb"></div>
+						<div class="gem-sb-track-dither"></div>
 					</div>
-
-					<div class="gem-patterns" id="patterns-grid"></div>
+					<div class="gem-sb-btn right"></div>
 				</div>
+				<div class="gem-sb-corner"></div>
 			</div>
 		</div>
 	</div>
 
-	<div class="gem-about-overlay" id="about-overlay">
-		<div class="gem-about-dialog" role="dialog" aria-modal="true" aria-label="About Spectrum 512 Painter">
-			<div class="gem-about-titlebar">
-				<button type="button" class="gem-about-titlebar-close" id="about-close" aria-label="Close"></button>
-				<div class="gem-about-titlebar-name">About Spectrum 512 Painter</div>
-			</div>
-			<div class="gem-about-body">
-				<p><strong>Spectrum 512 Painter</strong></p>
-				<p>A GEM-style paint program for Atari ST/STE workflows, running entirely in the browser using HTML5 Canvas.</p>
-				<p>Supports Spectrum 512 color conversion with multiple dither presets and targets for ST (512 colors), STE (4096), and STE Enhanced (32768).</p>
-				<p>Source code and documentation:<br>
-				<a href="https://github.com/AnimaInCorpore/Spectrum512Painter" target="_blank" rel="noopener noreferrer">github.com/AnimaInCorpore/Spectrum512Painter</a></p>
-			</div>
-			<div class="gem-about-footer">
-				<button type="button" class="gem-about-ok" id="about-ok">OK</button>
-			</div>
+	<template id="info-box-template">
+		<div class="gem-info-body">
+			<div class="gem-info-title">Spectrum 512 Painter</div>
+			<p>A GEM-style paint program for Atari ST/STE<br>pictures, running entirely in the browser.</p>
+			<p>Spectrum 512 color conversion for ST (512 colors),<br>STE (4096) and STE Enhanced (32768).</p>
+			<div class="gem-info-rule"></div>
+			<p>Source code and documentation:<br>
+			<a href="https://github.com/AnimaInCorpore/Spectrum512Painter" target="_blank" rel="noopener noreferrer">github.com/AnimaInCorpore/Spectrum512Painter</a></p>
 		</div>
-	</div>
-
-	<div class="gem-about-overlay" id="alert-overlay">
-		<div class="gem-about-dialog" role="alertdialog" aria-modal="true" aria-labelledby="alert-message">
-			<div class="gem-about-titlebar">
-				<div class="gem-about-titlebar-name">Alert</div>
-			</div>
-			<div class="gem-about-body">
-				<p id="alert-message"></p>
-			</div>
-			<div class="gem-about-footer" style="gap:24px">
-				<button type="button" class="gem-about-ok" id="alert-ok">OK</button>
-				<button type="button" class="gem-about-ok" id="alert-cancel" style="outline:none">Cancel</button>
-			</div>
-		</div>
-	</div>
-
-	<div class="gem-about-overlay" id="pattern-editor-overlay">
-		<div class="gem-about-dialog" role="dialog" aria-modal="true" aria-label="Edit Pattern" style="width:auto">
-			<div class="gem-about-titlebar">
-				<div class="gem-about-titlebar-name">Edit Pattern</div>
-			</div>
-			<div class="gem-about-body" style="align-items:center">
-				<div class="gem-pattern-grid" id="pattern-editor-grid"></div>
-			</div>
-			<div class="gem-about-footer" style="gap:12px">
-				<button type="button" class="gem-about-ok" id="pattern-editor-ok" style="min-width:0;padding:2px 12px">OK</button>
-				<button type="button" class="gem-about-ok" id="pattern-editor-cancel" style="outline:none;min-width:0;padding:2px 12px">Cancel</button>
-				<button type="button" class="gem-about-ok" id="pattern-editor-invert" style="outline:none;min-width:0;padding:2px 12px">Invert</button>
-				<button type="button" class="gem-about-ok" id="pattern-editor-clear" style="outline:none;min-width:0;padding:2px 12px">Clear</button>
-			</div>
-		</div>
-	</div>
+	</template>
 
 	<input type="file" id="file-open" accept=".img,.spu,image/png,image/jpeg,image/gif,image/webp,image/bmp" style="display:none">
 	<script type="module" src="./js/main.js"></script>

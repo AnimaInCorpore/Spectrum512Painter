@@ -29,7 +29,6 @@ export function createToolRegistry({ selection } = {}) {
 		polygon: createPolygonTool(),
 		'pie-slice': createPieSliceTool(),
 		ellipse: createEllipseTool(),
-		zoom: noop,
 		marquee: selection ? createMarqueeTool({ selection }) : noop,
 		text: noop
 	};
