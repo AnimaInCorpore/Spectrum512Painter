@@ -1,41 +1,38 @@
-export function initToolSelection(root = document, { onToolChange, onZoomToggle } = {}) {
-	const toolButtons = Array.from(root.querySelectorAll('.gem-tool-btn'));
-	const zoomButton = toolButtons.find(button => button.dataset.tool === 'zoom') || null;
-	const drawingButtons = toolButtons.filter(button => button !== zoomButton);
+import { TOOL_ICONS } from '../config/gem-icons.js';
+import { applyBitmap } from './bitmap-icons.js';
 
-	const notifySelectedTool = button => {
+// GEM Draw toolbox: a latched radio group of icon cells; the selected cell is shown inverted.
+
+function decorateToolButton(button) {
+	const icon = button.querySelector('.gem-tool-icon');
+	const rows = TOOL_ICONS[button.dataset.tool];
+	if (icon && rows) {
+		applyBitmap(icon, rows);
+	}
+	button.setAttribute('aria-label', button.title || button.dataset.tool);
+}
+
+export function initToolSelection(root = document, { onToolChange } = {}) {
+	const toolButtons = Array.from(root.querySelectorAll('.gem-tool-btn'));
+	toolButtons.forEach(decorateToolButton);
+
+	const select = button => {
+		toolButtons.forEach(other => {
+			const active = other === button;
+			other.classList.toggle('active', active);
+			other.setAttribute('aria-pressed', String(active));
+		});
 		if (typeof onToolChange === 'function' && button && button.dataset.tool) {
 			onToolChange(button.dataset.tool);
 		}
 	};
-	const notifyZoomState = enabled => {
-		if (typeof onZoomToggle === 'function') {
-			onZoomToggle(Boolean(enabled));
-		}
-	};
 
-	const initialDrawingButton = drawingButtons.find(button => button.classList.contains('active')) || drawingButtons[0] || null;
-	if (initialDrawingButton) {
-		drawingButtons.forEach(button => button.classList.toggle('active', button === initialDrawingButton));
-		notifySelectedTool(initialDrawingButton);
-	}
-	if (zoomButton) {
-		notifyZoomState(zoomButton.classList.contains('active'));
+	const initialButton = toolButtons.find(button => button.classList.contains('active')) || toolButtons[0] || null;
+	if (initialButton) {
+		select(initialButton);
 	}
 
-	drawingButtons.forEach(button => {
-		button.addEventListener('click', function() {
-			drawingButtons.forEach(otherButton => otherButton.classList.remove('active'));
-			button.classList.add('active');
-			notifySelectedTool(button);
-		});
+	toolButtons.forEach(button => {
+		button.addEventListener('click', () => select(button));
 	});
-
-	if (zoomButton) {
-		zoomButton.addEventListener('click', () => {
-			const enabled = !zoomButton.classList.contains('active');
-			zoomButton.classList.toggle('active', enabled);
-			notifyZoomState(enabled);
-		});
-	}
 }

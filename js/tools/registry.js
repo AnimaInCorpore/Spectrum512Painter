@@ -28,7 +28,6 @@ export function createToolRegistry() {
 		polygon: createPolygonTool(),
 		'pie-slice': createPieSliceTool(),
 		ellipse: createEllipseTool(),
-		zoom: noop,
 		marquee: noop,
 		text: noop
 	};

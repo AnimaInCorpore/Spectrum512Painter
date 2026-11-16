@@ -1,4 +1,3 @@
-import { PATTERN_CLASSES } from './config/patterns.js';
 import { GEM_256_COLORS } from './config/colors.js';
 import { createCanvasDocument } from './canvas/document.js';
 import { createHistoryManager } from './canvas/history.js';
@@ -8,12 +7,14 @@ import { setupFileSaving } from './io/saving.js';
 import { createToolController } from './tools/controller.js';
 import { createToolRegistry } from './tools/registry.js';
 import { createToolState } from './tools/state.js';
-import { initGemMenus } from './ui/menus.js';
+import { initGemMenus, setMenuEntryChecked, setMenuEntryLabel } from './ui/menus.js';
 import { initColorPalette } from './ui/colors.js';
-import { initLineSizeSlider } from './ui/line-size.js';
-import { initPatternPalette } from './ui/patterns.js';
-import { initShapeModeControl } from './ui/shape-mode.js';
+import { initInfoBox, showAlert } from './ui/dialogs.js';
+import { initLineMenu } from './ui/line-menu.js';
+import { initPatternMenu } from './ui/pattern-menu.js';
+import { initMenuShortcuts } from './ui/shortcuts.js';
 import { initToolSelection } from './ui/tools.js';
+import { initZoomBox, ZOOM_FULL } from './ui/zoom-box.js';
 import { initUndoRedoControls } from './ui/undo-redo.js';
 import {
 	createSpectrumCanvas,
@@ -27,7 +28,8 @@ import {
 	SPECTRUM512_OPTIMIZER_MODES
 } from './imaging/spectrum512.js';
 
-const patternsGrid = document.getElementById('patterns-grid');
+const lineMenu = document.getElementById('menu-line-widths');
+const patternMenu = document.getElementById('menu-pattern-swatches');
 const colorGrid = document.getElementById('color-grid');
 const foregroundSwatch = document.getElementById('color-foreground');
 const backgroundSwatch = document.getElementById('color-background');
@@ -73,7 +75,7 @@ let lastLoadedSource = null;
 let sourceRevision = 0;
 let spectrumSession = null;
 let viewportScroller = null;
-let displayZoomScale = 1;
+let zoomSetting = ZOOM_FULL;
 const DITHER_MENU_ENABLED = true;
 const BITS_TO_SPECTRUM_TARGET = {
 	3: 'st512',
@@ -81,7 +83,6 @@ const BITS_TO_SPECTRUM_TARGET = {
 	5: 'ste32768'
 };
 const MAX_HISTORY_STEPS = 32;
-const EDIT_ZOOM_SCALE = 4;
 
 const canvasDocument = createCanvasDocument({
 	canvas,
@@ -192,26 +193,21 @@ function getSpectrumConversionOptions() {
 	};
 }
 
-function setMenuChoiceText(entry, label, selected) {
-	if (!entry) {
-		return;
-	}
-	entry.textContent = `${selected ? '✓' : ' '} ${label}`;
-}
-
 function updateSpectrumMenuEntries() {
 	if (spectrumToggleEntry) {
-		spectrumToggleEntry.textContent = `Spectrum 512 ${spectrum512Enabled ? 'On' : 'Off'}`;
+		setMenuEntryLabel(spectrumToggleEntry, `Spectrum 512 ${spectrum512Enabled ? 'On' : 'Off'}`);
 		spectrumToggleEntry.setAttribute('aria-pressed', String(spectrum512Enabled));
 	}
 
 	Object.entries(SPECTRUM512_TARGETS).forEach(([key, target]) => {
-		setMenuChoiceText(targetEntryMap[key], target.label, key === spectrumTarget);
+		setMenuEntryLabel(targetEntryMap[key], target.label);
+		setMenuEntryChecked(targetEntryMap[key], key === spectrumTarget);
 	});
 
 	Object.entries(FLOYD_STEINBERG_DITHER_PRESETS).forEach(([key, preset]) => {
-		setMenuChoiceText(ditherEntryMap[key], preset.label, key === spectrumDither);
 		const entry = ditherEntryMap[key];
+		setMenuEntryLabel(entry, preset.label);
+		setMenuEntryChecked(entry, key === spectrumDither);
 		if (!entry) {
 			return;
 		}
@@ -220,43 +216,36 @@ function updateSpectrumMenuEntries() {
 	});
 
 	if (bruteForceEntry) {
-		bruteForceEntry.textContent = `Brute-Force ${bruteForceEnabled ? 'On' : 'Off'}`;
+		setMenuEntryLabel(bruteForceEntry, `Brute-Force ${bruteForceEnabled ? 'On' : 'Off'}`);
 		bruteForceEntry.setAttribute('aria-pressed', String(bruteForceEnabled));
 	}
 }
 
-function computeSpectrumScale() {
-	if (!canvasContainer) {
+// "Full" fits the whole picture into the window: whole-number magnification when it fits,
+// otherwise scaled down so the complete page is visible (GEM Draw's full page view).
+function computeFullZoomScale() {
+	if (!canvasContainer || canvas.width === 0 || canvas.height === 0) {
 		return 1;
 	}
-	const fitX = Math.floor(canvasContainer.clientWidth / SPECTRUM_CANVAS_WIDTH);
-	const fitY = Math.floor(canvasContainer.clientHeight / SPECTRUM_CANVAS_HEIGHT);
-	return Math.max(1, Math.min(fitX, fitY));
+	const fit = Math.min(canvasContainer.clientWidth / canvas.width, canvasContainer.clientHeight / canvas.height);
+	if (!Number.isFinite(fit) || fit <= 0) {
+		return 1;
+	}
+	return fit >= 1 ? Math.floor(fit) : fit;
 }
 
 function applyDisplayScale() {
-	const isSpectrumCanvas = canvas.width === SPECTRUM_CANVAS_WIDTH && canvas.height === SPECTRUM_CANVAS_HEIGHT;
-	const spectrumFitScale = (spectrum512Enabled && isSpectrumCanvas) ? computeSpectrumScale() : 1;
-	const totalScale = spectrumFitScale * displayZoomScale;
-
-	if (!spectrum512Enabled && totalScale <= 1) {
-		canvas.style.width = '';
-		canvas.style.height = '';
-		canvas.style.imageRendering = '';
-		return;
-	}
-
-	canvas.style.width = `${canvas.width * totalScale}px`;
-	canvas.style.height = `${canvas.height * totalScale}px`;
+	const scale = zoomSetting === ZOOM_FULL ? computeFullZoomScale() : zoomSetting;
+	canvas.style.width = `${Math.max(1, Math.round(canvas.width * scale))}px`;
+	canvas.style.height = `${Math.max(1, Math.round(canvas.height * scale))}px`;
 	canvas.style.imageRendering = 'pixelated';
 }
 
-function setDisplayZoomEnabled(enabled) {
-	const nextScale = enabled ? EDIT_ZOOM_SCALE : 1;
-	if (displayZoomScale === nextScale) {
+function setZoom(nextZoom) {
+	if (zoomSetting === nextZoom) {
 		return;
 	}
-	displayZoomScale = nextScale;
+	zoomSetting = nextZoom;
 	applyDisplayScale();
 	if (viewportScroller) {
 		viewportScroller.recalcScrollBounds();
@@ -487,14 +476,22 @@ function createDefaultBlankSource() {
 	};
 }
 
-function initializeDefaultDocument() {
-	if (lastLoadedSource) {
-		return;
-	}
+function startBlankDocument() {
 	lastLoadedSource = createDefaultBlankSource();
 	sourceRevision += 1;
 	clearSpectrumSession();
 	renderLoadedSource();
+}
+
+function initializeDefaultDocument() {
+	if (lastLoadedSource) {
+		return;
+	}
+	startBlankDocument();
+}
+
+function reportError(lines) {
+	showAlert({ icon: 'stop', lines, buttons: ['OK'] });
 }
 
 if (spectrumToggleEntry) {
@@ -566,7 +563,8 @@ window.addEventListener('resize', () => {
 const toolState = createToolState('pencil');
 const toolRegistry = createToolRegistry();
 
-initPatternPalette(patternsGrid, PATTERN_CLASSES, { toolState });
+initPatternMenu(patternMenu, { toolState });
+initLineMenu(lineMenu, { toolState });
 
 initColorPalette({
 	colorGrid,
@@ -575,16 +573,16 @@ initColorPalette({
 	colors: GEM_256_COLORS,
 	toolState
 });
-initLineSizeSlider(document, { toolState });
-initShapeModeControl(document, { toolState });
 
 initToolSelection(document, {
 	onToolChange: toolId => {
 		toolState.setActiveTool(toolId);
-	},
-	onZoomToggle: enabled => {
-		setDisplayZoomEnabled(enabled);
 	}
+});
+
+initZoomBox(document, {
+	initialZoom: zoomSetting,
+	onZoomChange: setZoom
 });
 
 let undoRedoControls = null;
@@ -642,6 +640,7 @@ setupFileLoading({
 	fileInput: document.getElementById('file-open'),
 	openMenuItem: document.getElementById('menu-file-open'),
 	dropTarget: canvasArea,
+	onError: reportError,
 	onImageLoaded: ({ image, fileName }) => {
 		lastLoadedSource = {
 			type: 'image',
@@ -700,30 +699,37 @@ setupFileSaving({
 		}
 		return canvas;
 	},
-	getSpuOptions: () => getSpectrumConversionOptions()
+	getSpuOptions: () => getSpectrumConversionOptions(),
+	onError: reportError
 });
 
 initializeDefaultDocument();
 historyManager.clear();
 
-const aboutOverlay = document.getElementById('about-overlay');
-const aboutMenuItem = document.getElementById('menu-desk-about');
+initInfoBox({
+	menuItem: document.getElementById('menu-desk-about'),
+	template: document.getElementById('info-box-template')
+});
 
-if (aboutOverlay && aboutMenuItem) {
-	const openAbout = () => aboutOverlay.classList.add('open');
-	const closeAbout = () => aboutOverlay.classList.remove('open');
-
-	aboutMenuItem.addEventListener('click', openAbout);
-	document.getElementById('about-close').addEventListener('click', closeAbout);
-	document.getElementById('about-ok').addEventListener('click', closeAbout);
-	aboutOverlay.addEventListener('click', event => {
-		if (event.target === aboutOverlay) {
-			closeAbout();
+const newMenuItem = document.getElementById('menu-file-new');
+if (newMenuItem) {
+	newMenuItem.addEventListener('click', async () => {
+		const choice = await showAlert({
+			icon: 'question',
+			lines: ['Clear the picture and start', 'a new one? Changes that have', 'not been saved are lost.'],
+			buttons: ['New', 'Cancel'],
+			defaultIndex: 1,
+			cancelIndex: 1
+		});
+		if (choice !== 0) {
+			return;
 		}
-	});
-	document.addEventListener('keydown', event => {
-		if (event.key === 'Escape' && aboutOverlay.classList.contains('open')) {
-			closeAbout();
-		}
+		startBlankDocument();
+		historyManager.clear();
 	});
 }
+
+initMenuShortcuts([
+	{ key: 'o', entry: document.getElementById('menu-file-open') },
+	{ key: 's', entry: document.getElementById('menu-file-save') }
+]);

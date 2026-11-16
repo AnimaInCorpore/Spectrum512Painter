@@ -21,10 +21,8 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 2.2 Borders and Relief
 
-- Use 1px/2px beveled borders to indicate raised vs sunken controls.
-- Raised controls: light edge top/left, dark edge bottom/right.
-- Sunken controls (fields, canvas viewport, pressed buttons): inverted bevel.
-- Keep bevel style consistent across all panels and controls.
+- GEM Draw uses flat 1px black outlines rather than bevels; selected or pressed controls are shown inverted.
+- Keep outline weight consistent across all panels and controls.
 
 ### 2.3 Typography
 
@@ -37,7 +35,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 ### 3.1 Main Window
 
 - Keep title bar with classic affordances: close box, title text, full-size gadget.
-- Keep tool palette, canvas window, and pattern panel visually separated by bevels.
+- Follow the GEM Draw Plus 2.0 layout: the toolbox is a fixed panel on the left of the desktop, separate from the drawing window; patterns and line widths live in the `Pattern` and `Line` menus rather than in side panels.
 - Avoid floating translucent overlays except explicit modal dialogs.
 
 ### 3.2 Canvas Area
@@ -51,7 +49,7 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 4.1 Menu Bar Structure
 
-- Top-level menus should remain short and stable (Desk, File, Edit/Options, Block, Color, etc.).
+- Top-level menus follow GEM Draw Plus: `Desk`, `File`, `Modify`, `Line`, `Pattern`, `Color`.
 - Keep menu order stable across releases.
 - Do not hide core commands in secondary overflow menus.
 
@@ -64,7 +62,9 @@ It is intentionally strict to keep the interface coherent and period-correct.
 
 ### 4.3 Menu Behavior
 
-- Menus open on click and close on outside click or command activation.
+- Menus drop down as soon as the pointer touches a title (GEM AES behavior); moving onto another title switches menus. A tap opens a menu on touch screens.
+- An open menu closes on command activation or on a click elsewhere; that click is consumed and never reaches the canvas.
+- Menu entries are highlighted by inverting them; separators are dashed disabled rows; check marks sit in a column left of the label; shortcuts use the GEM `^O` notation.
 - Disabled items remain visible but inactive (never removed).
 - Checked/toggled items should have an explicit indicator.
 - Keep submenu depth minimal (prefer at most one nested level).
@@ -77,6 +77,9 @@ It is intentionally strict to keep the interface coherent and period-correct.
 - Dialog titles and button captions must be action-specific and plain English.
 - Keep default action obvious; map Enter to default and Esc to cancel where possible.
 - Focus first actionable control when dialog opens.
+- GEM forms and alerts have no title bar: a white box with a thick black frame and a solid drop shadow, centred on screen. Clicks outside a form are ignored.
+- The default button has a thicker frame than the other exit buttons.
+- Alerts follow `form_alert`: a note, question or stop icon, short lines of text, one to three buttons.
 
 ### 5.2 Confirmations
 

@@ -16,13 +16,13 @@ This project is a painting program for the **Spectrum 512 Atari ST image format*
 - Keep tool identifiers stable via `data-tool` attributes in the UI and matching keys in the tool registry.
 
 ### Current JS Module Layout
-- `js/ui/*`: GEM menu behavior, tool button selection, pattern palette UI.
+- `js/ui/*`: GEM menu behavior, toolbox and magnification box, Line/Pattern menus, color palette, forms and alerts, menu shortcuts.
 - `js/canvas/*`: canvas document state and custom GEM viewport scrollbar behavior.
 - `js/io/*`: file loading, saving, and export handlers.
 - `js/tools/*`: tool state, tool controller, tool registry, helpers, and per-tool implementations.
 - `js/imaging/*`: image processing and color operations (for example quantization, palette mapping, dithering, conversions).
 - `js/formats/*`: file format encode/decode modules (for example Spectrum 512 readers/writers and related bitmap import/export codecs).
-- `js/config/*`: shared static configuration (for example pattern class lists).
+- `js/config/*`: shared static configuration (for example fill patterns and the 1-bit UI bitmaps in `gem-icons.js`).
 
 ### GEM IMG/XIMG Format Notes
 - Treat GEM IMG support as a family of variants: classic monochrome/palette planes and extended XIMG variants.
@@ -33,6 +33,7 @@ This project is a painting program for the **Spectrum 512 Atari ST image format*
 
 ## UI/UX Direction
 - The website shall mimic an **ancient Atari GEM-like GUI**.
+- The layout and behavior follow **GEM Draw Plus 2.0** (Digital Research, 1986): menu bar `Desk File Modify Line Pattern Color`, a toolbox panel on the left of the desktop with a two-column icon grid and the `Full 1/2 1 2 4 8` magnification box, drop-down menus that open when the pointer touches a title, and GEM forms/alerts without title bars. Paint-specific additions (color palette, extra tools) are drawn in the same style.
 - Use **proper GEM-style English text** for all visible GUI labels, menus, and captions.
 - Favor classic windowed desktop styling:
   - flat grayscale panels,
@@ -69,7 +70,7 @@ GEM Paint was modeled after MacPaint. Use MacPaint as the authoritative referenc
 - Magnifies the canvas (8× scale) so individual pixels are visible and clickable as enlarged squares. All drawing tools remain fully functional in this mode. A small navigator inset shows the unzoomed position.
 
 ### Patterns & Brushes
-- A palette of 38 predefined tileable 8×8 monochrome patterns is available for fill, brush, and shape tools. Patterns should be user-editable.
+- A palette of predefined tileable monochrome patterns (currently 21, offered in the `Pattern` menu) is available for fill, brush, and shape tools. Patterns should be user-editable.
 - Brush shapes (at least a basic set) are selectable from a palette.
 
 ### Canvas & Navigation

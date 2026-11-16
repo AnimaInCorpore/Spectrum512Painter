@@ -35,11 +35,12 @@ function saveSpu({
 	getSpuFileName,
 	getSpuSourceCanvas,
 	getSpuOptions,
+	onError,
 	promptForName = false
 }) {
 	const sourceCanvas = typeof getSpuSourceCanvas === 'function' ? getSpuSourceCanvas() : null;
 	if (!sourceCanvas) {
-		window.alert('No canvas available for SPU save.');
+		onError(['There is no picture to save.']);
 		return;
 	}
 
@@ -72,8 +73,10 @@ export function setupFileSaving({
 	getBaseFileName,
 	getSpuFileName,
 	getSpuSourceCanvas,
-	getSpuOptions
+	getSpuOptions,
+	onError
 }) {
+	const reportError = typeof onError === 'function' ? onError : lines => window.alert(lines.join(' '));
 	const downloadPngDefault = () => {
 		const baseName = typeof getBaseFileName === 'function' ? getBaseFileName() : 'UNTITLED';
 		downloadCanvas(canvas, `${baseName}.png`);
@@ -85,7 +88,8 @@ export function setupFileSaving({
 				getBaseFileName,
 				getSpuFileName,
 				getSpuSourceCanvas,
-				getSpuOptions
+				getSpuOptions,
+				onError: reportError
 			});
 		});
 	}
@@ -97,6 +101,7 @@ export function setupFileSaving({
 				getSpuFileName,
 				getSpuSourceCanvas,
 				getSpuOptions,
+				onError: reportError,
 				promptForName: true
 			});
 		});
