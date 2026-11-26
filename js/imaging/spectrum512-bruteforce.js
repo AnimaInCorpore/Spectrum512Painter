@@ -14,7 +14,7 @@ const IMPROVEMENT_EPSILON = 0.000001;
 // only protects slot 32 from being merged away, so slot 32 is the one that must stay put
 // here too. Locking slot 0 as well would freeze a slot the greedy pass may already have
 // reassigned, and it is reachable at a single column (x = 0) anyway.
-const LOCKED_SLOT_INDICES = new Set([32]);
+const DEFAULT_LOCKED_SLOT_INDICES = [32];
 
 function colorKey(red, green, blue) {
 	return (red << 16) | (green << 8) | blue;
@@ -179,8 +179,8 @@ function buildInitialAssignment(initialSlots, candidates) {
 	return assignment;
 }
 
-/** Which slots each column can draw from, and which columns each slot serves. */
-function buildSlotAccess(width, opaqueMask) {
+/** Which slots each column can draw from (color indices below `colorCount`), and which columns each slot serves. */
+function buildSlotAccess(width, opaqueMask, colorCount) {
 	const slotsByX = new Array(width);
 	const xBySlot = new Array(SLOT_COUNT);
 	for (let slotIndex = 0; slotIndex < SLOT_COUNT; slotIndex += 1) {
@@ -191,7 +191,7 @@ function buildSlotAccess(width, opaqueMask) {
 		const uniqueSlots = [];
 		if (opaqueMask[x]) {
 			const seen = new Uint8Array(SLOT_COUNT);
-			for (let colorIndex = 0; colorIndex < LOGICAL_COLOR_COUNT; colorIndex += 1) {
+			for (let colorIndex = 0; colorIndex < colorCount; colorIndex += 1) {
 				const slotIndex = getSpectrum512ColorSlotIndex(x, colorIndex);
 				if (seen[slotIndex]) {
 					continue;
@@ -336,7 +336,8 @@ function optimizeSlotAssignments({
 	distances,
 	width,
 	opaqueMask,
-	maxPasses
+	maxPasses,
+	lockedSlots
 }) {
 	const state = buildOptimizationState({
 		width,
@@ -350,7 +351,7 @@ function optimizeSlotAssignments({
 		let changedInPass = false;
 
 		for (let slotIndex = 0; slotIndex < SLOT_COUNT; slotIndex += 1) {
-			if (LOCKED_SLOT_INDICES.has(slotIndex)) {
+			if (lockedSlots.has(slotIndex)) {
 				continue;
 			}
 			if (slotAccess.xBySlot[slotIndex].length === 0) {
@@ -414,7 +415,7 @@ function buildOptimizedSlotsFromAssignment(assignment, candidates) {
 	return slots;
 }
 
-function optimizeLineSlots({ lineData, width, initialSlots, maxCandidates, maxPasses }) {
+function optimizeLineSlots({ lineData, width, initialSlots, maxCandidates, maxPasses, colorCount, lockedSlots }) {
 	const opaqueMask = collectOpaqueMask(lineData, width);
 	if (!hasAnyOpaquePixel(opaqueMask)) {
 		return cloneSlots(initialSlots);
@@ -424,11 +425,12 @@ function optimizeLineSlots({ lineData, width, initialSlots, maxCandidates, maxPa
 	const assignment = optimizeSlotAssignments({
 		assignment: buildInitialAssignment(initialSlots, candidates),
 		candidateCount: candidates.length,
-		slotAccess: buildSlotAccess(width, opaqueMask),
+		slotAccess: buildSlotAccess(width, opaqueMask, colorCount),
 		distances: computeDistanceTable(lineData, candidates, width),
 		width,
 		opaqueMask,
-		maxPasses
+		maxPasses,
+		lockedSlots
 	});
 
 	return buildOptimizedSlotsFromAssignment(assignment, candidates);
@@ -439,12 +441,16 @@ function optimizeLineSlots({ lineData, width, initialSlots, maxCandidates, maxPa
  * quantized to the target bit depth, as produced by the dither pass in spectrum512.js;
  * candidates are drawn from it verbatim. Returns one array of 48 slots per input line, or
  * null for a line that could not be processed.
+ * `colorCount` limits the pixels to the color indices below it (fewer registers, the others are
+ * kept for something else); the slots in `lockedSlots` keep their colors.
  */
 export function optimizeSpectrum512LineSlotsBruteForceBatch({
 	lines,
 	width,
 	maxCandidates = DEFAULT_MAX_CANDIDATES,
-	maxPasses = DEFAULT_MAX_PASSES
+	maxPasses = DEFAULT_MAX_PASSES,
+	colorCount = LOGICAL_COLOR_COUNT,
+	lockedSlots = DEFAULT_LOCKED_SLOT_INDICES
 }) {
 	if (!Array.isArray(lines) || width < 1) {
 		return [];
@@ -456,6 +462,8 @@ export function optimizeSpectrum512LineSlotsBruteForceBatch({
 	const boundedPasses = Number.isFinite(maxPasses)
 		? Math.max(1, Math.min(12, Math.floor(maxPasses)))
 		: DEFAULT_MAX_PASSES;
+	const boundedColorCount = Math.max(1, Math.min(LOGICAL_COLOR_COUNT, Math.floor(colorCount)));
+	const lockedSlotSet = new Set(lockedSlots);
 
 	const optimizedLines = new Array(lines.length);
 
@@ -476,7 +484,9 @@ export function optimizeSpectrum512LineSlotsBruteForceBatch({
 			width,
 			initialSlots: line.initialSlots,
 			maxCandidates: boundedMaxCandidates,
-			maxPasses: boundedPasses
+			maxPasses: boundedPasses,
+			colorCount: boundedColorCount,
+			lockedSlots: lockedSlotSet
 		});
 	}
 
