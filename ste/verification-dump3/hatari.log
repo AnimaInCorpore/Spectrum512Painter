@@ -1,0 +1,107 @@
+INFO : Hatari v2.6.1-devel (Sep  7 2026), compiled on:  Sep  7 2026, 10:21:43
+INFO : GEMDOS HDD emulation, C: <-> /Users/saschaspringer/Work/Spectrum512Painter/ste.
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/boot.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> b GemdosOpcode = 0x4b && OsCallParam = 0 :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/loaded.ini
+CPU condition breakpoint 1 with 2 condition(s) added:
+	GemdosOpcode = 0x4b && OsCallParam = 0
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/loaded.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+INFO : OS clock ticks / second: 100
+WARN : No GEMDOS dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/AUTO'
+1. CPU breakpoint condition(s) matched 1 times.
+	GemdosOpcode = 0x4b && OsCallParam = 0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/loaded.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/loaded.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> b pc = TEXT :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/start.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	pc = TEXT
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/start.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	GemdosOpcode = 0x4b && OsCallParam = 0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/loaded.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = TEXT :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/start.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/start.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> symbols /Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym TEXT
+Reading 'nm' style ASCII symbols from '/Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym'...
+Skipping detailed duplicate symbols reporting when autoload is enabled.
+Loaded 103 symbols (103 for code) from '/Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym'.
+> b pc = draw_begin :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/begin.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	pc = draw_begin
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/begin.ini' file on hit.
+> b pc = draw_done :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/done.ini
+CPU condition breakpoint 3 with 1 condition(s) added:
+	pc = draw_done
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/done.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = TEXT :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/start.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = draw_begin :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/begin.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/begin.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> echo DRAW_BEGIN
+DRAW_BEGIN> evaluate CycleCounter
+= %10101111111010010101000000 (bin), #46114112 (dec), $2bfa540 (hex)
+> w ball_x $0
+> w ball_y $1
+> w quality_mode $0
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = draw_begin :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/begin.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = draw_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/done.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/done.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> echo DRAW_DONE
+DRAW_DONE> evaluate CycleCounter
+= %10110100011010001000011000 (bin), #47292952 (dec), $2d1a218 (hex)
+  value at ($260fb2).l = $277c00
+- '(back_screen)' -> $277c00
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/screen.bin $277c00 #32000
+  Wrote 0x7d00 bytes.
+  value at ($260fba).l = $261760
+- '(back_palettes)' -> $261760
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/palettes.bin $261760 #19104
+  Wrote 0x4aa0 bytes.
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/fast-map.bin $1e14bc #422400
+  Wrote 0x67200 bytes.
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/sprite-codes-odd.bin $1e0e3c #1024
+  Wrote 0x400 bytes.
+- 'VBL+4' -> $12c
+> b VBL = $12c :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/capture.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	VBL = $12c
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/capture.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = draw_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/done.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	VBL = $12c :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/capture.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/capture.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3'.
+> screenshot /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/screen.png
+Screen dump to '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/screen.png' succeeded
+> quit
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	VBL = $12c :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-dump3/capture.ini
