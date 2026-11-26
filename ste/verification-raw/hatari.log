@@ -1,0 +1,217 @@
+INFO : Hatari v2.6.1-devel (Sep  7 2026), compiled on:  Sep  7 2026, 10:21:43
+INFO : GEMDOS HDD emulation, C: <-> /Users/saschaspringer/Work/Spectrum512Painter/ste.
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/boot.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> b GemdosOpcode = 0x4b && OsCallParam = 0 :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/loaded.ini
+CPU condition breakpoint 1 with 2 condition(s) added:
+	GemdosOpcode = 0x4b && OsCallParam = 0
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/loaded.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+INFO : OS clock ticks / second: 100
+WARN : No GEMDOS dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/AUTO'
+1. CPU breakpoint condition(s) matched 1 times.
+	GemdosOpcode = 0x4b && OsCallParam = 0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/loaded.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/loaded.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> b pc = TEXT :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/start.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	pc = TEXT
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/start.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	GemdosOpcode = 0x4b && OsCallParam = 0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/loaded.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = TEXT :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/start.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/start.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> symbols /Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym TEXT
+Reading 'nm' style ASCII symbols from '/Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym'...
+Skipping detailed duplicate symbols reporting when autoload is enabled.
+Loaded 94 symbols (94 for code) from '/Users/saschaspringer/Work/Spectrum512Painter/ste/program.sym'.
+> b pc = draw_begin :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/begin.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	pc = draw_begin
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/begin.ini' file on hit.
+> b pc = composite_done :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/composite.ini
+CPU condition breakpoint 3 with 1 condition(s) added:
+	pc = composite_done
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/composite.ini' file on hit.
+> b pc = draw_done :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/done.ini
+CPU condition breakpoint 4 with 1 condition(s) added:
+	pc = draw_done
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/done.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = TEXT :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/start.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = draw_begin :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/begin.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/begin.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> echo DRAW_BEGIN
+DRAW_BEGIN> evaluate CycleCounter
+= %10101111111010010101000000 (bin), #46114112 (dec), $2bfa540 (hex)
+> w spectrum_vbl $4e $75
+Wrote 2 'b' values starting from 0x191aa.
+> profile on
+Profiling enabled.
+- 'VBL+1200' -> $5d0
+> b VBL = $5d0 :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.ini
+CPU condition breakpoint 4 with 1 condition(s) added:
+	VBL = $5d0
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = draw_begin :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/begin.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = composite_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/composite.ini
+Profiler backtrace:
+#1  0x018a18: prepare_source -0x20e (composite_done +0x0)
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/composite.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> echo COMPOSITE_DONE
+COMPOSITE_DONE> evaluate CycleCounter
+= %10110000110000100011111000 (bin), #46336248 (dec), $2c308f8 (hex)
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = composite_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/composite.ini
+2. CPU breakpoint condition(s) matched 1 times.
+	VBL = $5d0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.ini
+Profiler backtrace:
+#1  0xe00c06: color_distance +0xde7d28 (stack_top +0xbe80c8)
+#2  0x01910c: remap_line +0x60
+#3  0x018cf8: rebuild_sprite_rows +0x2a
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> echo PROGRESS
+PROGRESS> evaluate (current_x).w
+  value at ($1f921c).w = $49
+= %1001001 (bin), #73 (dec), $49 (hex)
+> evaluate (current_y).w
+  value at ($1f921e).w = $6b
+= %1101011 (bin), #107 (dec), $6b (hex)
+> screenshot /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.png
+Screen dump to '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.png' succeeded
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 2:
+	VBL = $5d0 :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/progress.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	pc = draw_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/done.ini
+Normal RAM (0-0x400000):
+- active address range:
+  0x018cf4-0x0191aa
+- active instruction addresses:
+  336 (65.62% of all areas)
+- executed instructions:
+  4976849 (98.54% of all areas)
+- used cycles:
+  55369588 (97.65% of all areas)
+  = 6.90287s
+ROM TOS (0xE00000-0xE40000):
+- active address range:
+  0xe00b9a-0xe22892
+- active instruction addresses:
+  176 (34.38% of all areas)
+- executed instructions:
+  73625 (1.46% of all areas)
+- used cycles:
+  1330604 (2.35% of all areas)
+  = 0.16588s
+Cartridge ROM (0xFA0000-FC0000):
+- no activity
+
+= 7.06875s
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/done.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> echo DRAW_DONE
+DRAW_DONE> evaluate CycleCounter
+= %1111101011101111100010111000 (bin), #263125176 (dec), $faef8b8 (hex)
+> profile off
+Profiling disabled.
+> profile stats
+Normal RAM (0-0x400000):
+- active address range:
+  0x018cf4-0x0191aa
+- active instruction addresses:
+  336 (65.62% of all areas)
+- executed instructions:
+  4976849 (98.54% of all areas)
+- used cycles:
+  55369588 (97.65% of all areas)
+  = 6.90287s
+ROM TOS (0xE00000-0xE40000):
+- active address range:
+  0xe00b9a-0xe22892
+- active instruction addresses:
+  176 (34.38% of all areas)
+- executed instructions:
+  73625 (1.46% of all areas)
+- used cycles:
+  1330604 (2.35% of all areas)
+  = 0.16588s
+Cartridge ROM (0xFA0000-FC0000):
+- no activity
+
+= 7.06875s
+> profile cycles 12
+addr:		cycles:
+0x018fd2	 4.29%	2432630	00018fd2 b0b9 001f 9226           cmp.l $001f9226 [0000031e] best_cost,d0 2.19% (110385, 2432630, 0, 0)
+0x018f32	 3.80%	2156816	00018f32 c0f2 1000                mulu.w ($00,a2,d1.w) == $0001f69c [0000] ste_colors,d0 0.74% (37560, 2156816, 0, 0)
+0x018fa6	 3.51%	1990232	00018fa6 2275 0000                movea.l ($00,a5,d0.w) == $001f95ee [0002de50],a1 2.19% (110385, 1990232, 0, 0)
+0x018faa	 2.73%	1548134	00018faa b3fc 001f 942e           cmpa.l #$001f942e,a1               2.19% (110385, 1548134, 0, 0)
+0x018fb4	 2.73%	1547972	00018fb4 e948                     lsl.w #$04,d0                      2.19% (110385, 1547972, 0, 0)
+0x018fba	 2.73%	1547780	00018fba 49f9 001f 957e           lea.l $001f957e pair_costs,a4      2.19% (110385, 1547780, 0, 0)
+0x018fd0	 2.34%	1327300	00018fd0 2014                     move.l (a4) == $001f993a [0002c052],d0 2.19% (110385, 1327300, 0, 0)
+0x018ff2	 2.24%	1268688	00018ff2 66ae                     bne.b #$ae == $00018fa2 (F)        2.19% (110385, 1268688, 0, 0)
+0x018f0c	 2.09%	1187276	00018f0c d072 1000                add.w ($00,a2,d1.w) == $0001f69c [0000] ste_colors,d0 1.47% (73998, 1187276, 0, 0)
+0x018f10	 2.09%	1186024	00018f10 4e75                     rts  == $00000000                  1.47% (73999, 1186024, 0, 0)
+0x018efe	 2.09%	1185904	00018efe d072 1000                add.w ($00,a2,d1.w) == $0001f69c [0000] ste_colors,d0 1.47% (73998, 1185904, 0, 0)
+0x018ef0	 2.09%	1185516	00018ef0 3032 1000                move.w ($00,a2,d1.w) == $0001f69c [0000] ste_colors,d0 1.47% (73998, 1185516, 0, 0)
+12 CPU addresses listed.
+  value at ($1f91d4).l = $20fe00
+- '(back_screen)' -> $20fe00
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/screen.bin $20fe00 #32000
+  Wrote 0x7d00 bytes.
+  value at ($1f91dc).l = $1f997e
+- '(back_palettes)' -> $1f997e
+> savebin /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/palettes.bin $1f997e #19104
+  Wrote 0x4aa0 bytes.
+- 'VBL+4' -> $77c
+> b VBL = $77c :trace :once :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/capture.ini
+CPU condition breakpoint 2 with 1 condition(s) added:
+	VBL = $77c
+-> Break only once, and delete breakpoint afterwards.
+-> Trace (just show breakpoint info, instead of dropping to debugger).
+-> Execute debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/capture.ini' file on hit.
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	pc = draw_done :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/done.ini
+1. CPU breakpoint condition(s) matched 1 times.
+	VBL = $77c :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/capture.ini
+Reading debugger commands from '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/capture.ini'...
+Changed to input file dir '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw'.
+> screenshot /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/screen.png
+Screen dump to '/Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/screen.png' succeeded
+> quit
+Changed back to '/Users/saschaspringer/Work/Spectrum512Painter/ste' dir.
+Debugger re-init.
+Removed CPU breakpoint 1:
+	VBL = $77c :once :trace :file /Users/saschaspringer/Work/Spectrum512Painter/ste/verification-raw/capture.ini
